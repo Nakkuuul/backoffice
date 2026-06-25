@@ -57,11 +57,16 @@ backoffice/
 ## Getting started
 
 ```bash
-cp .env.example .env      # fill in DB credentials + JWT secret
+cp .env.example .env      # already created for local; fill in real secrets for prod
 npm install
+docker compose up -d      # start PostgreSQL 16 (local dev DB)
 npm run migrate           # apply DB migrations
 npm run dev               # start with auto-reload
 ```
+
+The DB runs in Docker (`docker-compose.yml`, Postgres 16-alpine) with data
+persisted to the `backoffice-pgdata` volume. Credentials are read from `.env`.
+Stop it with `docker compose down` (add `-v` to also wipe data).
 
 Health check: `GET http://localhost:3000/api/v1/health/live`
 
