@@ -33,31 +33,28 @@ backoffice/
 │   │   ├── routes/            # top-level route aggregator
 │   │   └── middlewares/       # auth, validate, error handler, 404
 │   ├── modules/               # feature modules (modular monolith)
-│   │   ├── health/            # liveness/readiness probes (implemented)
-│   │   ├── auth/              # authentication (skeleton)
-│   │   ├── users/             # user management (skeleton)
+│   │   ├── health/            # liveness/readiness probes
 │   │   ├── esign-service/     # PDF signing via physical DSC (PKCS#11) — LIVE
 │   │   ├── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
 │   │   └── reports-service/   # client reports in PDF/CSV/XLSX/HTML (HTML→PDF)
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
-│   │   ├── migrations/        # NNN_name.sql forward migrations
-│   │   └── seeds/             # seed data
-│   ├── shared/
-│   │   ├── errors/            # AppError hierarchy
-│   │   ├── utils/             # logger, asyncHandler, crypto, ...
-│   │   ├── storage/           # object storage (MinIO/S3 | local) for all files
-│   │   └── constants/
-│   ├── jobs/                  # scheduled / cron tasks
-│   └── integrations/          # external system clients
+│   │   └── migrations/        # NNN_name.sql forward migrations
+│   └── shared/
+│       ├── errors/            # AppError hierarchy
+│       ├── utils/             # logger, asyncHandler, crypto, ...
+│       └── storage/           # object storage (MinIO/S3 | local) for all files
 ├── mta/                       # broker's own SMTP server (Haraka) — outbound MTA
-├── scripts/                   # migrate.js, seed.js
-├── tests/                     # unit + integration
+├── scripts/                   # migrate.js + per-module test/CLI scripts
+├── tests/                     # integration tests
 ├── logs/                      # runtime logs (gitignored)
-├── docs/
 ├── ecosystem.config.cjs       # PM2 deployment config
 └── .env.example
 ```
+
+> Note: authentication is enforced by `src/api/middlewares/authenticate.js`
+> (JWT) used across modules, and the `users` table backs ownership FKs — a
+> dedicated auth/users module hasn't been built yet.
 
 ## Getting started
 
@@ -86,8 +83,8 @@ Health check: `GET http://localhost:3000/api/v1/health/live`
 | `npm run dev`      | Start with `--watch` auto-reload     |
 | `npm start`        | Start (production)                   |
 | `npm run migrate`  | Apply pending DB migrations          |
-| `npm run seed`     | Run seeders                          |
 | `npm test`         | Run tests (node:test)                |
+| `npm run storage:test` | Object-storage round-trip check  |
 | `npm run lint`     | Lint                                 |
 | `npm run format`   | Format with Prettier                 |
 
@@ -105,8 +102,6 @@ pm2 save && pm2 startup
 | Module   | Status   | Notes                                                              |
 | -------- | -------- | ------------------------------------------------------------------ |
 | health   | live     | Liveness/readiness probes                                          |
-| auth     | skeleton | Login/JWT — to be built                                            |
-| users    | skeleton | User management — to be built                                      |
 | esign-service | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
 | email-service | **working** | Durable Postgres outbox + horizontal worker fleet, DKIM, suppression, templating. Auto-receives signed docs from esign-service. See its README |
 | reports-service | **framework** | Generates client reports in PDF/CSV/XLSX/HTML (HTML→PDF via Chromium); on-demand + bulk queue; pluggable report definitions. See its README |

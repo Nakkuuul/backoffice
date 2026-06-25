@@ -36,5 +36,5 @@ scratch-signed*.pdf
 # Secrets (DKIM private keys, etc.)
 secrets/
 
-# Generated report files
-reports-output/
+# Local-storage fallback (when STORAGE_DRIVER=local)
+storage-data/

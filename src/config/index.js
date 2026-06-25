@@ -154,8 +154,7 @@ export const config = {
   },
 
   reports: {
-    // Directory on the on-prem host where generated report files are written.
-    outputDir: process.env.REPORTS_DIR || 'reports-output',
+    // Generated files go to the shared object store (src/shared/storage).
     // Bulk generation worker.
     worker: {
       enabled: process.env.REPORTS_WORKER_ENABLED ? toBool(process.env.REPORTS_WORKER_ENABLED) : true,

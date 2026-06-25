@@ -12,8 +12,6 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "migrate": "node scripts/migrate.js up",
-    "migrate:down": "node scripts/migrate.js down",
-    "seed": "node scripts/seed.js",
     "test": "node --test tests/**/*.test.js",
     "esign:test-sign": "node scripts/test-sign.mjs",
     "esign:test-api": "node scripts/test-api.mjs",
