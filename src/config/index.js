@@ -77,6 +77,11 @@ export const config = {
       reason: process.env.ESIGN_REASON || 'Digitally signed by broker backoffice',
       location: process.env.ESIGN_LOCATION || '',
       contactInfo: process.env.ESIGN_CONTACT || '',
+      // Draw a visible stamp on the page (vs. an invisible signature).
+      visible: process.env.ESIGN_VISIBLE ? toBool(process.env.ESIGN_VISIBLE) : true,
+      // Which page to stamp ('first' | 'last') and corner of the page.
+      page: process.env.ESIGN_STAMP_PAGE || 'first',
+      corner: process.env.ESIGN_STAMP_CORNER || 'bottom-right', // bottom-right|bottom-left|top-right|top-left
     },
   },
 };

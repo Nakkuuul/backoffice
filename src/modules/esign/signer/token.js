@@ -162,6 +162,7 @@ function loadMaterial(session, { certLabel, withPrivateKey }) {
     chain,
     certSerialHex: serialHex(leaf),
     certSubject: dnToString(leaf.subject),
+    certCN: subjectCN(leaf),
   };
 
   if (withPrivateKey) {

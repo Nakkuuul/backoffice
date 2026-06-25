@@ -41,6 +41,7 @@ esign/
 │   ├── Pkcs11PdfSigner.js  # PKCS#11 + PAdES adapter (lazy native deps)
 │   ├── token.js            # PKCS#11 session, key/cert chain loading, raw signing
 │   ├── cms.js              # CMS/PKCS#7 SignedData builder (pkijs)
+│   ├── appearance.js       # visible signature stamp + widget placeholder (pdf-lib)
 │   ├── errors.js           # typed errors (disabled / not configured / token / deps)
 │   └── index.js            # getSigner() factory
 └── ports/
@@ -66,6 +67,26 @@ DELETE /api/v1/esign/config/pin                     # remove
 > Security note: the PIN is encrypted at rest with `ESIGN_ENC_KEY`. Keep that
 > key out of the database and out of source control. On the broker server,
 > prefer a real secret store; the env var is the minimum bar.
+
+## Visible signature appearance
+
+By default a visible stamp is drawn on the document: a bordered block showing
+`Digitally signed by`, the signer CN (from the cert), the signing date, and the
+reason/location. The signature widget is placed over it, so it appears both on
+the page and in the viewer's Signature Panel.
+
+Configured via env:
+
+| Var                  | Default          | Meaning                                              |
+| -------------------- | ---------------- | ---------------------------------------------------- |
+| `ESIGN_VISIBLE`      | `true`           | Draw a visible stamp; `false` = invisible signature  |
+| `ESIGN_STAMP_PAGE`   | `first`          | `first` or `last` page                               |
+| `ESIGN_STAMP_CORNER` | `bottom-right`   | `bottom-right`/`bottom-left`/`top-right`/`top-left`  |
+| `ESIGN_REASON`       | (see .env)       | Reason line shown in the stamp + signature dict      |
+| `ESIGN_LOCATION`     | empty            | Optional location line                               |
+
+If the visible path fails for a particular document, signing falls back to an
+invisible signature (xref-stream PDFs are normalized via pdf-lib automatically).
 
 ## API (`/api/v1/esign`, all require auth)
 
@@ -121,8 +142,9 @@ PORT_NOT_REGISTERED`; inline `documentBase64` signing is fully working.
 
 ## TODO / roadmap
 
-- [ ] **Visible signature appearance** — currently an invisible signature.
-      Add a signature widget (logo, signer name, timestamp) via pdf-lib.
+- [x] **Visible signature appearance** — bordered stamp (signer, date, reason)
+      drawn via pdf-lib, configurable page/corner. _Possible enhancements: logo/
+      image, custom layout, drawing into the field AP stream instead of page._
 - [ ] **PAdES-B-B compliance** — add the ESS `signing-certificate-v2` signed
       attribute (currently contentType + signingTime + messageDigest).
 - [ ] **Trusted timestamp (RFC 3161 TSA)** — embed a timestamp token so

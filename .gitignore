@@ -31,4 +31,4 @@ pids/
 tmp/
 
 # eSign test artifacts
-scratch-signed.pdf
+scratch-signed*.pdf

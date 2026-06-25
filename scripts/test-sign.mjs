@@ -14,6 +14,20 @@ import { getSigner } from '../src/modules/esign/signer/index.js';
 
 const OUT = 'scratch-signed.pdf';
 
+/** Write the signed PDF, falling back to a numbered name if the file is locked
+ * (e.g. open in a PDF viewer). */
+function writeSigned(buf) {
+  for (const name of [OUT, 'scratch-signed-1.pdf', 'scratch-signed-2.pdf']) {
+    try {
+      writeFileSync(name, buf);
+      return name;
+    } catch (e) {
+      if (e.code !== 'EBUSY' && e.code !== 'EPERM') throw e;
+    }
+  }
+  throw new Error('All output files are locked — close the PDF viewer and retry');
+}
+
 async function makeSamplePdf() {
   const doc = await PDFDocument.create();
   const page = doc.addPage([400, 200]);
@@ -62,8 +76,8 @@ console.log(`\nSigning sample PDF (${pdf.length} bytes)...`);
 const { signed, certSerial, certSubject, algorithm } = await signer.signPdf(pdf, {
   reason: 'eSign pipeline test',
 });
-writeFileSync(OUT, signed);
-console.log(`Signed PDF: ${signed.length} bytes -> ${OUT}`);
+const outName = writeSigned(signed);
+console.log(`Signed PDF: ${signed.length} bytes -> ${outName}`);
 console.log(`Signer: ${certSubject} | serial ${certSerial} | ${algorithm}`);
 
 // Verify.

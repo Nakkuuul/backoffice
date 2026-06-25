@@ -74,40 +74,30 @@ export class Pkcs11PdfSigner extends SignerProvider {
    * a CMS built around the token's RSA operation.
    */
   async signPdf(pdfBuffer, options = {}) {
-    const { withSigningMaterial, buildCmsSignature, SignPdf, plainAddPlaceholder } =
-      await this.#load();
+    const { withSigningMaterial, buildCmsSignature, SignPdf } = await this.#load();
     const { Signer } = await import('@signpdf/utils');
     const appearance = { ...config.esign.appearance, ...options };
-
-    const placeholderOpts = {
-      reason: appearance.reason,
-      location: appearance.location,
-      contactInfo: appearance.contactInfo,
-      // Reserve generous space for the CMS (leaf + CA chain + signature).
-      signatureLength: 16384,
-    };
-
-    let withPlaceholder;
-    try {
-      withPlaceholder = plainAddPlaceholder({ pdfBuffer, ...placeholderOpts });
-    } catch (err) {
-      // @signpdf needs a classic xref table; many PDFs (PDF 1.5+, pdf-lib output)
-      // use xref streams. Normalize via pdf-lib and retry once.
-      logger.warn({ err: err.message }, 'esign: normalizing PDF xref before signing');
-      const normalized = await normalizePdf(pdfBuffer);
-      withPlaceholder = plainAddPlaceholder({ pdfBuffer: normalized, ...placeholderOpts });
-    }
+    const signatureLength = 16384; // room for leaf + CA chain + signature
+    const signingTime = new Date();
 
     return withSigningMaterial(async (material) => {
       if (!material.signRaw) throw new TokenUnavailableError('No signing key available');
 
+      // Build the placeholder. Visible stamp uses the signer's CN from the cert.
+      const withPlaceholder = await this.#addPlaceholder(pdfBuffer, {
+        ...appearance,
+        name: appearance.name || material.certCN,
+        signingTime,
+        signatureLength,
+      });
+
       // Bridge our CMS builder into @signpdf's Signer contract.
       const tokenSigner = new (class extends Signer {
-        async sign(content, signingTime = new Date()) {
+        async sign(content, time = signingTime) {
           return buildCmsSignature(content, {
             leaf: material.leaf,
             chain: material.chain,
-            signingTime,
+            signingTime: time,
             signRaw: material.signRaw,
           });
         }
@@ -121,6 +111,31 @@ export class Pkcs11PdfSigner extends SignerProvider {
         algorithm: 'sha256WithRSAEncryption',
       };
     });
+  }
+
+  /**
+   * Produce a PDF with a signature placeholder — visible stamp by default,
+   * falling back to an invisible placeholder if appearance.visible is false or
+   * the visible path fails for a given document.
+   */
+  async #addPlaceholder(pdfBuffer, opts) {
+    if (opts.visible !== false) {
+      try {
+        const { addVisibleSignaturePlaceholder } = await import('./appearance.js');
+        return await addVisibleSignaturePlaceholder(pdfBuffer, opts);
+      } catch (err) {
+        logger.warn({ err: err.message }, 'esign: visible appearance failed, using invisible');
+      }
+    }
+    // Invisible fallback.
+    const { plainAddPlaceholder } = await import('@signpdf/placeholder-plain');
+    const base = { ...opts };
+    try {
+      return plainAddPlaceholder({ pdfBuffer, ...base });
+    } catch {
+      const normalized = await normalizePdf(pdfBuffer);
+      return plainAddPlaceholder({ pdfBuffer: normalized, ...base });
+    }
   }
 }
 
