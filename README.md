@@ -38,7 +38,8 @@ backoffice/
 │   │   ├── esign-service/     # PDF signing via physical DSC (PKCS#11) — LIVE
 │   │   ├── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
 │   │   ├── reports-service/   # client reports in PDF/CSV/XLSX/HTML (HTML→PDF)
-│   │   └── document-service/  # PDF ops (compress, lock/unlock) via qpdf
+│   │   ├── document-service/  # PDF ops (compress, lock/unlock) via qpdf
+│   │   └── accounting-service/# Tally-like accounting: Group/Ledger masters, BS & P&L
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
 │   │   └── migrations/        # NNN_name.sql forward migrations
@@ -108,6 +109,7 @@ pm2 save && pm2 startup
 | email-service | **working** | Durable Postgres outbox + horizontal worker fleet, DKIM, suppression, templating. Auto-receives signed docs from esign-service. See its README |
 | reports-service | **framework** | Generates client reports in PDF/CSV/XLSX/HTML (HTML→PDF via Chromium); on-demand + bulk queue; pluggable report definitions. See its README |
 | document-service | **working** | Reusable PDF operations — compress, lock/unlock (qpdf, AES-256). Serves esign's DocumentSource. See its README |
+| accounting-service | **masters** | Tally-like Group & Ledger masters (28 groups seeded) + Balance Sheet & P&L. Vouchers next. See its README |
 | mta (Haraka)  | scaffolded | Broker's own outbound SMTP server (direct-to-MX) the app submits to. On-prem deploy; see `mta/README.md` for the deliverability reality check |
 
 ### Native dependency note (eSign)

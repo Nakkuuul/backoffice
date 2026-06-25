@@ -5,6 +5,7 @@ import esignRoutes from '../../modules/esign-service/esign.routes.js';
 import emailRoutes from '../../modules/email-service/email.routes.js';
 import reportsRoutes from '../../modules/reports-service/reports.routes.js';
 import documentRoutes from '../../modules/document-service/document.routes.js';
+import accountingRoutes from '../../modules/accounting-service/accounting.routes.js';
 
 /**
  * Mounts every feature module under the API. Add new modules here.
@@ -18,5 +19,6 @@ router.use('/esign', esignRoutes);
 router.use('/email', emailRoutes);
 router.use('/reports', reportsRoutes);
 router.use('/documents', documentRoutes);
+router.use('/accounting', accountingRoutes);
 
 export default router;

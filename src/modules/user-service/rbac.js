@@ -18,6 +18,7 @@ export const PERMISSIONS = Object.freeze({
   email: ['email:read', 'email:send', 'email:suppress', 'email:config'],
   reports: ['reports:read', 'reports:generate', 'reports:bulk'],
   documents: ['documents:read', 'documents:operate'],
+  accounting: ['accounting:read', 'accounting:manage'],
   system: ['audit:read', 'system:config'],
   // Client self-service (their own data only — enforced per-endpoint by client_ref).
   self: ['self:profile', 'self:reports:read', 'self:documents:read'],
@@ -52,8 +53,15 @@ export const ROLES = Object.freeze({
       'email:read', 'email:send', 'email:suppress',
       'reports:*',
       'documents:*',
+      'accounting:*',
       'audit:read',
     ],
+  },
+  accountant: {
+    type: USER_TYPE.BROKER,
+    label: 'Accountant',
+    description: 'Manage the chart of accounts and books; view financial statements.',
+    permissions: ['accounting:*', 'reports:read', 'documents:read', 'clients:read'],
   },
   compliance: {
     type: USER_TYPE.BROKER,
@@ -63,6 +71,7 @@ export const ROLES = Object.freeze({
       'esign:read', 'esign:sign',
       'reports:read', 'reports:generate',
       'documents:read', 'documents:operate',
+      'accounting:read',
       'clients:read', 'audit:read',
     ],
   },
@@ -89,7 +98,7 @@ export const ROLES = Object.freeze({
     description: 'Read-only access across the backoffice for audit.',
     permissions: [
       'users:read', 'clients:read', 'esign:read', 'email:read',
-      'reports:read', 'documents:read', 'audit:read',
+      'reports:read', 'documents:read', 'accounting:read', 'audit:read',
     ],
   },
   // ── Client side ──────────────────────────────────────────────────────────
