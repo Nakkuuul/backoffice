@@ -39,7 +39,8 @@ backoffice/
 │   │   ├── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
 │   │   ├── reports-service/   # client reports in PDF/CSV/XLSX/HTML (HTML→PDF)
 │   │   ├── document-service/  # PDF ops (compress, lock/unlock) via qpdf
-│   │   └── accounting-service/# Tally-like accounting: Group/Ledger masters, BS & P&L
+│   │   ├── accounting-service/# Tally-like accounting: Group/Ledger masters, BS & P&L
+│   │   └── ekyc-service/      # eKYC + reKYC workflow; frontoffice intake; pluggable providers
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
 │   │   └── migrations/        # NNN_name.sql forward migrations
@@ -110,6 +111,7 @@ pm2 save && pm2 startup
 | reports-service | **framework** | Generates client reports in PDF/CSV/XLSX/HTML (HTML→PDF via Chromium); on-demand + bulk queue; pluggable report definitions. See its README |
 | document-service | **working** | Reusable PDF operations — compress, lock/unlock (qpdf, AES-256). Serves esign's DocumentSource. See its README |
 | accounting-service | **masters** | Tally-like Group & Ledger masters (28 groups seeded) + Balance Sheet & P&L. Vouchers next. See its README |
+| ekyc-service | **base** | eKYC + reKYC workflow; secret-authed frontoffice intake; checks/documents; stubbed providers (NSDL/UIDAI/bank later). See its README |
 | mta (Haraka)  | scaffolded | Broker's own outbound SMTP server (direct-to-MX) the app submits to. On-prem deploy; see `mta/README.md` for the deliverability reality check |
 
 ### Native dependency note (eSign)

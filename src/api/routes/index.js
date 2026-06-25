@@ -6,6 +6,7 @@ import emailRoutes from '../../modules/email-service/email.routes.js';
 import reportsRoutes from '../../modules/reports-service/reports.routes.js';
 import documentRoutes from '../../modules/document-service/document.routes.js';
 import accountingRoutes from '../../modules/accounting-service/accounting.routes.js';
+import ekycRoutes from '../../modules/ekyc-service/ekyc.routes.js';
 
 /**
  * Mounts every feature module under the API. Add new modules here.
@@ -20,5 +21,6 @@ router.use('/email', emailRoutes);
 router.use('/reports', reportsRoutes);
 router.use('/documents', documentRoutes);
 router.use('/accounting', accountingRoutes);
+router.use('/ekyc', ekycRoutes);
 
 export default router;

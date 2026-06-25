@@ -26,6 +26,7 @@
     "user:create": "node scripts/create-user.mjs",
     "users:test": "node scripts/test-users.mjs",
     "accounting:test": "node scripts/test-accounting.mjs",
+    "ekyc:test": "node scripts/test-ekyc.mjs",
     "test:integration": "node scripts/test-integration.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

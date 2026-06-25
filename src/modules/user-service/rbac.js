@@ -19,9 +19,10 @@ export const PERMISSIONS = Object.freeze({
   reports: ['reports:read', 'reports:generate', 'reports:bulk'],
   documents: ['documents:read', 'documents:operate'],
   accounting: ['accounting:read', 'accounting:manage'],
+  kyc: ['kyc:read', 'kyc:manage', 'kyc:verify'],
   system: ['audit:read', 'system:config'],
   // Client self-service (their own data only — enforced per-endpoint by client_ref).
-  self: ['self:profile', 'self:reports:read', 'self:documents:read'],
+  self: ['self:profile', 'self:reports:read', 'self:documents:read', 'self:kyc:read'],
 });
 
 /** Flat list of every concrete permission. */
@@ -54,6 +55,7 @@ export const ROLES = Object.freeze({
       'reports:*',
       'documents:*',
       'accounting:*',
+      'kyc:*',
       'audit:read',
     ],
   },
@@ -72,6 +74,7 @@ export const ROLES = Object.freeze({
       'reports:read', 'reports:generate',
       'documents:read', 'documents:operate',
       'accounting:read',
+      'kyc:read', 'kyc:verify',
       'clients:read', 'audit:read',
     ],
   },
@@ -84,6 +87,7 @@ export const ROLES = Object.freeze({
       'documents:read', 'documents:operate',
       'email:read', 'email:send',
       'esign:read', 'clients:read',
+      'kyc:read', 'kyc:manage', 'kyc:verify',
     ],
   },
   support: {
@@ -98,7 +102,7 @@ export const ROLES = Object.freeze({
     description: 'Read-only access across the backoffice for audit.',
     permissions: [
       'users:read', 'clients:read', 'esign:read', 'email:read',
-      'reports:read', 'documents:read', 'accounting:read', 'audit:read',
+      'reports:read', 'documents:read', 'accounting:read', 'kyc:read', 'audit:read',
     ],
   },
   // ── Client side ──────────────────────────────────────────────────────────

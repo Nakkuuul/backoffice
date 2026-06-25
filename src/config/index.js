@@ -136,6 +136,14 @@ export const config = {
     },
   },
 
+  ekyc: {
+    // Verification provider backend (stub | nsdl | … later).
+    provider: process.env.KYC_PROVIDER || 'stub',
+    // Shared secret the frontoffice/onboarding portal presents to push
+    // applicants into the backoffice (POST /ekyc/intake).
+    intakeSecret: process.env.EKYC_INTAKE_SECRET || '',
+  },
+
   documents: {
     // Path to the qpdf binary (compression + encrypt/decrypt). On Linux on-prem
     // this is just 'qpdf' after `apt install qpdf`; on Windows point at the exe.
