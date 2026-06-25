@@ -23,6 +23,8 @@
     "reports:test": "node scripts/test-reports.mjs",
     "storage:test": "node scripts/test-storage.mjs",
     "documents:test": "node scripts/test-documents.mjs",
+    "user:create": "node scripts/create-user.mjs",
+    "users:test": "node scripts/test-users.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
@@ -37,6 +39,7 @@
     "@signpdf/placeholder-pdf-lib": "^3.3.0",
     "@signpdf/placeholder-plain": "^3.3.0",
     "@signpdf/signpdf": "^3.3.0",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

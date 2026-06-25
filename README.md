@@ -34,6 +34,7 @@ backoffice/
 │   │   └── middlewares/       # auth, validate, error handler, 404
 │   ├── modules/               # feature modules (modular monolith)
 │   │   ├── health/            # liveness/readiness probes
+│   │   ├── user-service/      # users + auth (JWT) + RBAC (broker & client roles)
 │   │   ├── esign-service/     # PDF signing via physical DSC (PKCS#11) — LIVE
 │   │   ├── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
 │   │   ├── reports-service/   # client reports in PDF/CSV/XLSX/HTML (HTML→PDF)
@@ -53,9 +54,8 @@ backoffice/
 └── .env.example
 ```
 
-> Note: authentication is enforced by `src/api/middlewares/authenticate.js`
-> (JWT) used across modules, and the `users` table backs ownership FKs — a
-> dedicated auth/users module hasn't been built yet.
+> Note: `user-service` owns auth (JWT login) + RBAC; `authenticate` /
+> `requirePermission` in `src/api/middlewares/` enforce it across all modules.
 
 ## Getting started
 
@@ -103,6 +103,7 @@ pm2 save && pm2 startup
 | Module   | Status   | Notes                                                              |
 | -------- | -------- | ------------------------------------------------------------------ |
 | health   | live     | Liveness/readiness probes                                          |
+| user-service | **live** | Users, auth (JWT + bcrypt), and RBAC for broker staff + clients. Single UI driven by effective permissions. See its README |
 | esign-service | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
 | email-service | **working** | Durable Postgres outbox + horizontal worker fleet, DKIM, suppression, templating. Auto-receives signed docs from esign-service. See its README |
 | reports-service | **framework** | Generates client reports in PDF/CSV/XLSX/HTML (HTML→PDF via Chromium); on-demand + bulk queue; pluggable report definitions. See its README |
