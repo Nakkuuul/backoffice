@@ -35,3 +35,6 @@ scratch-signed*.pdf
 
 # Secrets (DKIM private keys, etc.)
 secrets/
+
+# Generated report files
+reports-output/

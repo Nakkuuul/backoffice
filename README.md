@@ -37,7 +37,8 @@ backoffice/
 │   │   ├── auth/              # authentication (skeleton)
 │   │   ├── users/             # user management (skeleton)
 │   │   ├── esign-service/     # PDF signing via physical DSC (PKCS#11) — LIVE
-│   │   └── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
+│   │   ├── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
+│   │   └── reports-service/   # client reports in PDF/CSV/XLSX/HTML (HTML→PDF)
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
 │   │   ├── migrations/        # NNN_name.sql forward migrations
@@ -103,6 +104,7 @@ pm2 save && pm2 startup
 | users    | skeleton | User management — to be built                                      |
 | esign-service | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
 | email-service | **working** | Durable Postgres outbox + horizontal worker fleet, DKIM, suppression, templating. Auto-receives signed docs from esign-service. See its README |
+| reports-service | **framework** | Generates client reports in PDF/CSV/XLSX/HTML (HTML→PDF via Chromium); on-demand + bulk queue; pluggable report definitions. See its README |
 | mta (Haraka)  | scaffolded | Broker's own outbound SMTP server (direct-to-MX) the app submits to. On-prem deploy; see `mta/README.md` for the deliverability reality check |
 
 ### Native dependency note (eSign)

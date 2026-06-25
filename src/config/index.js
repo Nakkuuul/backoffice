@@ -135,4 +135,19 @@ export const config = {
       maxAttempts: Number(process.env.EMAIL_MAX_ATTEMPTS || 6),
     },
   },
+
+  reports: {
+    // Directory on the on-prem host where generated report files are written.
+    outputDir: process.env.REPORTS_DIR || 'reports-output',
+    // Bulk generation worker.
+    worker: {
+      enabled: process.env.REPORTS_WORKER_ENABLED ? toBool(process.env.REPORTS_WORKER_ENABLED) : true,
+      concurrency: Number(process.env.REPORTS_WORKER_CONCURRENCY || 2),
+      batchSize: Number(process.env.REPORTS_BATCH_SIZE || 10),
+      pollIntervalMs: Number(process.env.REPORTS_POLL_INTERVAL_MS || 1500),
+    },
+    // Puppeteer launch flags (Chromium). --no-sandbox is needed in many
+    // container/on-prem setups.
+    puppeteerArgs: (process.env.REPORTS_PUPPETEER_ARGS || '--no-sandbox,--disable-setuid-sandbox').split(','),
+  },
 };

@@ -22,6 +22,7 @@
     "email:gen-dkim": "node scripts/gen-dkim.mjs",
     "email:test": "node scripts/test-email.mjs",
     "email:test-inbound": "node scripts/test-inbound.mjs",
+    "reports:test": "node scripts/test-reports.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
@@ -37,6 +38,7 @@
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "graphene-pk11": "^2.3.6",
     "helmet": "^7.1.0",
@@ -49,6 +51,7 @@
     "pino": "^9.3.2",
     "pino-http": "^10.2.0",
     "pkijs": "^3.4.0",
+    "puppeteer": "^25.2.1",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

@@ -3,6 +3,7 @@ import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { pool } from './db/pool.js';
 import { initEmailService, stopEmailService } from './modules/email-service/email.init.js';
+import { initReportsService, stopReportsService } from './modules/reports-service/reports.init.js';
 
 /**
  * Process entry point. Boots the HTTP server and wires graceful shutdown.
@@ -13,6 +14,7 @@ async function start() {
   // Wire email-service into esign-service and (optionally) start the in-process
   // outbox worker. Disable the worker here and run a separate fleet at scale.
   initEmailService();
+  initReportsService();
 
   const server = app.listen(config.app.port, config.app.host, () => {
     logger.info(
@@ -24,6 +26,7 @@ async function start() {
   const shutdown = async (signal) => {
     logger.info(`Received ${signal}, shutting down gracefully...`);
     await stopEmailService();
+    await stopReportsService();
     server.close(async () => {
       await pool.end();
       logger.info('Shutdown complete');
