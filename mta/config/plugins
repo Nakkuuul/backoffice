@@ -1,0 +1,13 @@
+# Enabled Haraka plugins (order matters).
+
+# Grant relaying to trusted internal clients (our app) and accept their
+# recipients. Outbound delivery (direct-to-MX) is Haraka core. NOT an open relay.
+local_relay
+
+# ── Production hardening (enable on the real server) ───────────────────────────
+# STARTTLS on submission — requires real cert/key in config/tls.ini:
+# tls
+# Require SMTP AUTH in addition to the trusted-IP check (config/auth_flat_file.ini):
+# auth/flat_file
+# Sign at the MTA instead of the app (then set DKIM_ENABLED=false in the app):
+# dkim_sign

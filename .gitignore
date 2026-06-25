@@ -32,3 +32,6 @@ tmp/
 
 # eSign test artifacts
 scratch-signed*.pdf
+
+# Secrets (DKIM private keys, etc.)
+secrets/

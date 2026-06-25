@@ -18,6 +18,9 @@
     "esign:test-sign": "node scripts/test-sign.mjs",
     "esign:test-api": "node scripts/test-api.mjs",
     "esign:test-pin": "node scripts/test-pin-db.mjs",
+    "email:worker": "node scripts/email-worker.mjs",
+    "email:gen-dkim": "node scripts/gen-dkim.mjs",
+    "email:test": "node scripts/test-email.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
@@ -38,6 +41,7 @@
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^9.0.1",
     "pdf-lib": "^1.17.1",
     "pg": "^8.12.0",
     "pino": "^9.3.2",
@@ -48,6 +52,7 @@
   "devDependencies": {
     "eslint": "^9.9.0",
     "pino-pretty": "^11.2.2",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "smtp-server": "^3.19.1"
   }
 }

@@ -1,0 +1,2 @@
+# Local (inbound) domains Haraka accepts mail FOR.
+# Empty = pure outbound relay: we only SEND, we don't receive inbound mail.

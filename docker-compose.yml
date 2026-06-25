@@ -17,6 +17,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # Broker's own SMTP server (Haraka). Receives mail from the app on 2525 and
+  # delivers direct-to-MX. Outbound delivery REQUIRES the on-prem network to
+  # allow egress on TCP/25 (see mta/README.md).
+  mta:
+    build: ./mta
+    container_name: backoffice-mta
+    restart: unless-stopped
+    ports:
+      # Submission port — exposed to localhost only (the app runs on the host).
+      - "127.0.0.1:2525:2525"
+    volumes:
+      - mta-queue:/haraka/queue
+      # Live config + custom plugins (edit on host, restart to apply).
+      - ./mta/config:/haraka/config
+      - ./mta/plugins:/haraka/plugins
+
 volumes:
   pgdata:
     name: backoffice-pgdata
+  mta-queue:
+    name: backoffice-mta-queue

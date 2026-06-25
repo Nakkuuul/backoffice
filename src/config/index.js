@@ -84,4 +84,51 @@ export const config = {
       corner: process.env.ESIGN_STAMP_CORNER || 'bottom-right', // bottom-right|bottom-left|top-right|top-left
     },
   },
+
+  email: {
+    // Default envelope/header identity. From should be on the authenticated domain.
+    from: process.env.EMAIL_FROM || 'no-reply@example.com',
+    fromName: process.env.EMAIL_FROM_NAME || 'Broker Backoffice',
+    replyTo: process.env.EMAIL_REPLY_TO || '',
+    // Domain used for Message-ID and (with DKIM) alignment.
+    domain: process.env.EMAIL_DOMAIN || 'example.com',
+    // One-click unsubscribe target (List-Unsubscribe). Strongly recommended for bulk.
+    unsubscribeUrl: process.env.EMAIL_UNSUBSCRIBE_URL || '',
+
+    // SMTP relay (nodemailer). Point at your MTA or a provider's SMTP endpoint.
+    smtp: {
+      host: process.env.SMTP_HOST || '',
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: toBool(process.env.SMTP_SECURE), // true for 465, false for 587 (STARTTLS)
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+      // Connection pooling for throughput.
+      maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS || 5),
+      maxMessages: Number(process.env.SMTP_MAX_MESSAGES || 100),
+      // Cap messages/sec per process to respect relay/ISP throttles (0 = unlimited).
+      rateLimit: Number(process.env.SMTP_RATE_LIMIT || 0),
+      // Reject invalid/self-signed TLS certs (default true). Set false only for
+      // a relay with a self-signed cert you trust (e.g. an internal MTA).
+      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED
+        ? toBool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED)
+        : true,
+    },
+
+    // DKIM signing (the biggest deliverability lever the app controls).
+    dkim: {
+      enabled: toBool(process.env.DKIM_ENABLED),
+      domainName: process.env.DKIM_DOMAIN || process.env.EMAIL_DOMAIN || '',
+      keySelector: process.env.DKIM_SELECTOR || 's1',
+      privateKeyPath: process.env.DKIM_PRIVATE_KEY_PATH || '',
+    },
+
+    // Outbox worker pool.
+    worker: {
+      enabled: process.env.EMAIL_WORKER_ENABLED ? toBool(process.env.EMAIL_WORKER_ENABLED) : true,
+      concurrency: Number(process.env.EMAIL_WORKER_CONCURRENCY || 4),
+      batchSize: Number(process.env.EMAIL_BATCH_SIZE || 50),
+      pollIntervalMs: Number(process.env.EMAIL_POLL_INTERVAL_MS || 1000),
+      maxAttempts: Number(process.env.EMAIL_MAX_ATTEMPTS || 6),
+    },
+  },
 };

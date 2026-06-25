@@ -10,7 +10,7 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 import * as asn1js from 'asn1js';
 import { ContentInfo, SignedData } from 'pkijs';
 import { extractSignature } from '@signpdf/utils';
-import { getSigner } from '../src/modules/esign/signer/index.js';
+import { getSigner } from '../src/modules/esign-service/signer/index.js';
 
 const OUT = 'scratch-signed.pdf';
 
@@ -83,7 +83,7 @@ console.log(`Signer: ${certSubject} | serial ${certSerial} | ${algorithm}`);
 // Verify.
 const { signature, signedData } = extractSignature(signed);
 const cmsBuf = Buffer.isBuffer(signature) ? signature : Buffer.from(signature, 'binary');
-const { withSigningMaterial } = await import('../src/modules/esign/signer/token.js');
+const { withSigningMaterial } = await import('../src/modules/esign-service/signer/token.js');
 const leaf = await withSigningMaterial(async (m) => Buffer.from(m.leaf.toSchema().toBER(false)), {
   login: false,
 });

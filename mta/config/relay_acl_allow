@@ -1,0 +1,7 @@
+# Hosts/subnets allowed to relay WITHOUT authentication (trusted internal only).
+# The app on the same on-prem host connects from localhost; the Docker bridge
+# subnet covers an app container. Keep this list tight — anything here can relay.
+127.0.0.1/32
+::1/128
+# Default Docker bridge subnet (adjust to your compose network):
+172.16.0.0/12

@@ -36,7 +36,8 @@ backoffice/
 │   │   ├── health/            # liveness/readiness probes (implemented)
 │   │   ├── auth/              # authentication (skeleton)
 │   │   ├── users/             # user management (skeleton)
-│   │   └── esign/             # PDF signing via physical DSC (PKCS#11) — LIVE
+│   │   ├── esign-service/     # PDF signing via physical DSC (PKCS#11) — LIVE
+│   │   └── email-service/     # durable SMTP outbox + worker fleet (DKIM, suppression)
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
 │   │   ├── migrations/        # NNN_name.sql forward migrations
@@ -47,6 +48,7 @@ backoffice/
 │   │   └── constants/
 │   ├── jobs/                  # scheduled / cron tasks
 │   └── integrations/          # external system clients
+├── mta/                       # broker's own SMTP server (Haraka) — outbound MTA
 ├── scripts/                   # migrate.js, seed.js
 ├── tests/                     # unit + integration
 ├── logs/                      # runtime logs (gitignored)
@@ -99,7 +101,9 @@ pm2 save && pm2 startup
 | health   | live     | Liveness/readiness probes                                          |
 | auth     | skeleton | Login/JWT — to be built                                            |
 | users    | skeleton | User management — to be built                                      |
-| esign    | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
+| esign-service | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
+| email-service | **working** | Durable Postgres outbox + horizontal worker fleet, DKIM, suppression, templating. Auto-receives signed docs from esign-service. See its README |
+| mta (Haraka)  | scaffolded | Broker's own outbound SMTP server (direct-to-MX) the app submits to. On-prem deploy; see `mta/README.md` for the deliverability reality check |
 
 ### Native dependency note (eSign)
 

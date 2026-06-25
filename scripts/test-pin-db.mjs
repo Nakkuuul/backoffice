@@ -3,7 +3,7 @@
  * the PIN. Stores process.env.PKCS11_PIN encrypted, reads it back, asserts match.
  */
 import { query, pool } from '../src/db/pool.js';
-import { setPin, isPinStored, resolvePin } from '../src/modules/esign/esign.settings.js';
+import { setPin, isPinStored, resolvePin } from '../src/modules/esign-service/esign.settings.js';
 import { config } from '../src/config/index.js';
 
 const pin = process.env.PKCS11_PIN;

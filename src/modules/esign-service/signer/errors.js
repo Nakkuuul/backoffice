@@ -18,7 +18,7 @@ export class Pkcs11NotConfiguredError extends AppError {
 export class Pkcs11DependencyMissingError extends AppError {
   constructor(pkg) {
     super(
-      `Native dependency "${pkg}" is not installed. See src/modules/esign/README.md`,
+      `Native dependency "${pkg}" is not installed. See src/modules/esign-service/README.md`,
       501,
       { code: 'PKCS11_DEPENDENCY_MISSING' },
     );

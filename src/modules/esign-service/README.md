@@ -131,7 +131,7 @@ When you build them, register their implementations during bootstrap — no
 changes needed inside eSign:
 
 ```js
-import { registerDocumentSource, registerEmailSender } from './modules/esign/ports/index.js';
+import { registerDocumentSource, registerEmailSender } from './modules/esign-service/ports/index.js';
 
 registerDocumentSource({ getDocument: (ref) => documentsService.fetch(ref) });
 registerEmailSender({ sendMail: (msg) => emailService.send(msg) });
