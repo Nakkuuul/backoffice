@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
 import { validate } from '../../api/middlewares/validate.js';
-import { authenticate } from '../../api/middlewares/authenticate.js';
+import { authenticate, requirePermission } from '../../api/middlewares/authenticate.js';
 import * as controller from './reports.controller.js';
 import { generateSchema, bulkSchema, listSchema, idParamSchema } from './reports.validation.js';
 
@@ -17,11 +17,11 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/types', controller.types);
-router.post('/generate', validate(generateSchema), asyncHandler(controller.generate));
-router.post('/bulk', validate(bulkSchema), asyncHandler(controller.bulk));
-router.get('/', validate(listSchema, 'query'), asyncHandler(controller.list));
-router.get('/:id', validate(idParamSchema, 'params'), asyncHandler(controller.getOne));
-router.get('/:id/download', validate(idParamSchema, 'params'), asyncHandler(controller.download));
+router.get('/types', requirePermission('reports:read'), controller.types);
+router.post('/generate', requirePermission('reports:generate'), validate(generateSchema), asyncHandler(controller.generate));
+router.post('/bulk', requirePermission('reports:bulk'), validate(bulkSchema), asyncHandler(controller.bulk));
+router.get('/', requirePermission('reports:read'), validate(listSchema, 'query'), asyncHandler(controller.list));
+router.get('/:id', requirePermission('reports:read'), validate(idParamSchema, 'params'), asyncHandler(controller.getOne));
+router.get('/:id/download', requirePermission('reports:read'), validate(idParamSchema, 'params'), asyncHandler(controller.download));
 
 export default router;

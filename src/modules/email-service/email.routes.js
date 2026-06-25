@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
 import { validate } from '../../api/middlewares/validate.js';
-import { authenticate, authorize } from '../../api/middlewares/authenticate.js';
+import { authenticate, requirePermission } from '../../api/middlewares/authenticate.js';
 import { config } from '../../config/index.js';
 import { UnauthorizedError } from '../../shared/errors/AppError.js';
 import * as controller from './email.controller.js';
@@ -37,14 +37,14 @@ router.post(
 
 router.use(authenticate);
 
-router.get('/health', asyncHandler(controller.health));
+router.get('/health', requirePermission('email:read'), asyncHandler(controller.health));
 
-router.post('/send', validate(sendSchema), asyncHandler(controller.send));
-router.get('/messages', validate(listSchema, 'query'), asyncHandler(controller.list));
-router.get('/messages/:id', validate(idParamSchema, 'params'), asyncHandler(controller.getOne));
+router.post('/send', requirePermission('email:send'), validate(sendSchema), asyncHandler(controller.send));
+router.get('/messages', requirePermission('email:read'), validate(listSchema, 'query'), asyncHandler(controller.list));
+router.get('/messages/:id', requirePermission('email:read'), validate(idParamSchema, 'params'), asyncHandler(controller.getOne));
 
-// Suppression list management (admin).
-router.post('/suppressions', authorize('admin'), validate(suppressionSchema), asyncHandler(controller.addSuppression));
-router.delete('/suppressions/:address', authorize('admin'), asyncHandler(controller.removeSuppression));
+// Suppression list management.
+router.post('/suppressions', requirePermission('email:suppress'), validate(suppressionSchema), asyncHandler(controller.addSuppression));
+router.delete('/suppressions/:address', requirePermission('email:suppress'), asyncHandler(controller.removeSuppression));
 
 export default router;

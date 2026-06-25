@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
 import { validate } from '../../api/middlewares/validate.js';
-import { authenticate, authorize } from '../../api/middlewares/authenticate.js';
+import { authenticate, requirePermission } from '../../api/middlewares/authenticate.js';
 import * as controller from './esign.controller.js';
 import { signSchema, listSchema, idParamSchema, pinSchema } from './esign.validation.js';
 
@@ -17,19 +17,21 @@ const router = Router();
 router.use(authenticate);
 
 // Token / certificate diagnostics.
-router.get('/status', asyncHandler(controller.status));
-router.get('/certificate', asyncHandler(controller.certificate));
+router.get('/status', requirePermission('esign:read'), asyncHandler(controller.status));
+router.get('/certificate', requirePermission('esign:read'), asyncHandler(controller.certificate));
 
-// DSC PIN configuration (admin only). Stored encrypted; never returned.
-router.post('/config/pin', authorize('admin'), validate(pinSchema), asyncHandler(controller.setPin));
-router.get('/config/pin', authorize('admin'), asyncHandler(controller.pinStatus));
-router.delete('/config/pin', authorize('admin'), asyncHandler(controller.deletePin));
+// DSC PIN configuration (sensitive — esign:config, reserved to super_admin).
+// Stored encrypted; never returned.
+router.post('/config/pin', requirePermission('esign:config'), validate(pinSchema), asyncHandler(controller.setPin));
+router.get('/config/pin', requirePermission('esign:config'), asyncHandler(controller.pinStatus));
+router.delete('/config/pin', requirePermission('esign:config'), asyncHandler(controller.deletePin));
 
 // Signing + history.
-router.post('/sign', validate(signSchema), asyncHandler(controller.sign));
-router.get('/requests', validate(listSchema, 'query'), asyncHandler(controller.list));
+router.post('/sign', requirePermission('esign:sign'), validate(signSchema), asyncHandler(controller.sign));
+router.get('/requests', requirePermission('esign:read'), validate(listSchema, 'query'), asyncHandler(controller.list));
 router.get(
   '/requests/:id',
+  requirePermission('esign:read'),
   validate(idParamSchema, 'params'),
   asyncHandler(controller.getOne),
 );

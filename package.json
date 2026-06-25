@@ -25,6 +25,7 @@
     "documents:test": "node scripts/test-documents.mjs",
     "user:create": "node scripts/create-user.mjs",
     "users:test": "node scripts/test-users.mjs",
+    "test:integration": "node scripts/test-integration.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
