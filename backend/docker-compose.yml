@@ -1,3 +1,7 @@
+# Pinned project name so containers/volumes stay stable regardless of the
+# directory compose is invoked from (we moved this file under backend/).
+name: backoffice
+
 services:
   postgres:
     image: postgres:16-alpine
