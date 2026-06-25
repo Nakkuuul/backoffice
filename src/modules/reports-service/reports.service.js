@@ -32,7 +32,7 @@ export async function produce({ reportType, format, params }) {
 
   const { buffer, contentType, ext } = await render(def, data, format);
   const filename = buildFilename(def, format, params);
-  const { storageRef, size } = await storage.save(buffer, { filename });
+  const { storageRef, size } = await storage.save(buffer, { filename, contentType });
 
   return {
     buffer,

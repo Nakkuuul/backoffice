@@ -45,7 +45,8 @@ backoffice/
 │   │   └── seeds/             # seed data
 │   ├── shared/
 │   │   ├── errors/            # AppError hierarchy
-│   │   ├── utils/             # logger, asyncHandler, ...
+│   │   ├── utils/             # logger, asyncHandler, crypto, ...
+│   │   ├── storage/           # object storage (MinIO/S3 | local) for all files
 │   │   └── constants/
 │   ├── jobs/                  # scheduled / cron tasks
 │   └── integrations/          # external system clients
@@ -68,9 +69,13 @@ npm run migrate           # apply DB migrations
 npm run dev               # start with auto-reload
 ```
 
-The DB runs in Docker (`docker-compose.yml`, Postgres 16-alpine) with data
-persisted to the `backoffice-pgdata` volume. Credentials are read from `.env`.
-Stop it with `docker compose down` (add `-v` to also wipe data).
+`docker-compose.yml` runs the on-prem infrastructure:
+- **postgres** (16-alpine) — primary database (`backoffice-pgdata` volume)
+- **minio** + **minio-setup** — S3-compatible object storage for all generated
+  files; API `:9000`, console `:9001` (`backoffice-minio-data` volume)
+- **mta** (Haraka) — the broker's own SMTP server (see `mta/README.md`)
+
+Credentials come from `.env`. Stop with `docker compose down` (add `-v` to wipe data).
 
 Health check: `GET http://localhost:3000/api/v1/health/live`
 

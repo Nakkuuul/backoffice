@@ -23,11 +23,14 @@
     "email:test": "node scripts/test-email.mjs",
     "email:test-inbound": "node scripts/test-inbound.mjs",
     "reports:test": "node scripts/test-reports.mjs",
+    "storage:test": "node scripts/test-storage.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@peculiar/asn1-cms": "^2.8.0",
     "@peculiar/asn1-schema": "^2.8.0",
     "@peculiar/asn1-x509": "^2.8.0",

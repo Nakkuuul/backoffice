@@ -136,6 +136,23 @@ export const config = {
     },
   },
 
+  storage: {
+    // 's3' (MinIO/S3-compatible, recommended) or 'local' (plain disk fallback).
+    driver: process.env.STORAGE_DRIVER || 's3',
+    local: {
+      dir: process.env.STORAGE_LOCAL_DIR || 'storage-data',
+    },
+    s3: {
+      endpoint: process.env.S3_ENDPOINT || 'http://127.0.0.1:9000',
+      region: process.env.S3_REGION || 'us-east-1',
+      accessKeyId: process.env.S3_ACCESS_KEY || 'backoffice',
+      secretAccessKey: process.env.S3_SECRET_KEY || 'backoffice_secret',
+      bucket: process.env.S3_BUCKET || 'backoffice',
+      // MinIO needs path-style addressing (bucket in the path, not the host).
+      forcePathStyle: true,
+    },
+  },
+
   reports: {
     // Directory on the on-prem host where generated report files are written.
     outputDir: process.env.REPORTS_DIR || 'reports-output',

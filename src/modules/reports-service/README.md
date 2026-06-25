@@ -22,8 +22,9 @@ changes to the rest of the service.
 - **CSV/XLSX:** generated from the definition's `columns` + `rows` (exceljs for xlsx).
 - **Run model:** on-demand (inline) **and** bulk (durable queue + worker with
   `SKIP LOCKED`, same pattern as the email outbox).
-- **Storage:** local disk (`REPORTS_DIR`), tracked in the `reports` table via a
-  `storage_ref` — swap to MinIO/S3 later behind the same `storage/` interface.
+- **Storage:** the shared object store (**MinIO/S3**, `src/shared/storage`),
+  keyed under `reports/<day>/`, tracked in the `reports` table via `storage_ref`.
+  Falls back to local disk with `STORAGE_DRIVER=local`.
 
 ## Layout
 
@@ -110,7 +111,7 @@ npm run reports:test      # generate the sample report in all 4 formats, verify 
 - [ ] **esign integration** — option to auto-sign generated PDFs via esign-service.
 - [ ] **email integration** — option to auto-deliver via email-service (per client).
 - [ ] **Scheduling** — nightly bulk runs (cron) for daily statements.
-- [ ] **Object storage** — MinIO/S3 backend behind `storage/`.
+- [x] **Object storage** — files stored in shared MinIO/S3 (`src/shared/storage`).
 - [ ] **Branding** — logo/letterhead + per-report templates.
 - [ ] **Streaming for large reports** — stream rows to CSV/XLSX to bound memory.
 ```
