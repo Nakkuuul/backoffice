@@ -38,6 +38,6 @@ export default [
   },
   {
     // mta/ is the Haraka MTA — a separate CommonJS service with its own runtime.
-    ignores: ['node_modules/', 'logs/', 'coverage/', 'dist/', 'mta/'],
+    ignores: ['node_modules/', 'logs/', 'coverage/', 'dist/', 'mta/', 'tools/', 'storage-data/'],
   },
 ];

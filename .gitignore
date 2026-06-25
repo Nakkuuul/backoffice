@@ -38,3 +38,6 @@ secrets/
 
 # Local-storage fallback (when STORAGE_DRIVER=local)
 storage-data/
+
+# Portable tools (e.g. Windows qpdf) — installed per-host, not committed
+tools/

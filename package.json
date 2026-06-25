@@ -22,6 +22,7 @@
     "email:test-inbound": "node scripts/test-inbound.mjs",
     "reports:test": "node scripts/test-reports.mjs",
     "storage:test": "node scripts/test-storage.mjs",
+    "documents:test": "node scripts/test-documents.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."

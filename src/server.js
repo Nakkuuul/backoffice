@@ -5,6 +5,7 @@ import { pool } from './db/pool.js';
 import { initStorage } from './shared/storage/index.js';
 import { initEmailService, stopEmailService } from './modules/email-service/email.init.js';
 import { initReportsService, stopReportsService } from './modules/reports-service/reports.init.js';
+import { initDocumentService } from './modules/document-service/document.init.js';
 
 /**
  * Process entry point. Boots the HTTP server and wires graceful shutdown.
@@ -17,6 +18,7 @@ async function start() {
   await initStorage(); // ensure the object-storage bucket exists before modules use it
   initEmailService();
   initReportsService();
+  initDocumentService();
 
   const server = app.listen(config.app.port, config.app.host, () => {
     logger.info(

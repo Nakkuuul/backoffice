@@ -136,6 +136,14 @@ export const config = {
     },
   },
 
+  documents: {
+    // Path to the qpdf binary (compression + encrypt/decrypt). On Linux on-prem
+    // this is just 'qpdf' after `apt install qpdf`; on Windows point at the exe.
+    qpdfBin: process.env.QPDF_BIN || 'qpdf',
+    // AES key length for locking (40 | 128 | 256). 256 = AES-256 (recommended).
+    encryptionBits: Number(process.env.PDF_ENCRYPTION_BITS || 256),
+  },
+
   storage: {
     // 's3' (MinIO/S3-compatible, recommended) or 'local' (plain disk fallback).
     driver: process.env.STORAGE_DRIVER || 's3',
