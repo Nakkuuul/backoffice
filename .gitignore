@@ -29,3 +29,6 @@ pids/
 *.pid
 *.seed
 tmp/
+
+# eSign test artifacts
+scratch-signed.pdf

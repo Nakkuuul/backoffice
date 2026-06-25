@@ -35,7 +35,8 @@ backoffice/
 │   ├── modules/               # feature modules (modular monolith)
 │   │   ├── health/            # liveness/readiness probes (implemented)
 │   │   ├── auth/              # authentication (skeleton)
-│   │   └── users/             # user management (skeleton)
+│   │   ├── users/             # user management (skeleton)
+│   │   └── esign/             # PDF signing via physical DSC (PKCS#11) — LIVE
 │   ├── db/
 │   │   ├── pool.js            # shared PostgreSQL pool + withTransaction
 │   │   ├── migrations/        # NNN_name.sql forward migrations
@@ -90,6 +91,23 @@ npm run migrate
 pm2 start ecosystem.config.cjs --env production
 pm2 save && pm2 startup
 ```
+
+## Modules
+
+| Module   | Status   | Notes                                                              |
+| -------- | -------- | ------------------------------------------------------------------ |
+| health   | live     | Liveness/readiness probes                                          |
+| auth     | skeleton | Login/JWT — to be built                                            |
+| users    | skeleton | User management — to be built                                      |
+| esign    | **live** | Signs PDFs (PAdES) with a physical DSC over PKCS#11. See its README |
+
+### Native dependency note (eSign)
+
+The eSign module uses native PKCS#11 bindings (`graphene-pk11` → `pkcs11js`).
+These compile/prebuild on install and are required on the broker server, along
+with the DSC token's vendor middleware (the PKCS#11 `.dll`/`.so`). If deploying
+to a host without the token toolchain, eSign endpoints degrade gracefully
+(`ESIGN_DISABLED` / `PKCS11_DEPENDENCY_MISSING`) rather than crashing the app.
 
 ## Adding a module
 

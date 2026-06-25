@@ -6,7 +6,6 @@ import { config } from '../../config/index.js';
  * Global error-handling middleware. Must be registered LAST.
  * Operational (known) errors expose their message; everything else is masked.
  */
-// eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, _next) {
   const isOperational = err instanceof AppError && err.isOperational;
   const statusCode = isOperational ? err.statusCode : 500;

@@ -47,4 +47,36 @@ export const config = {
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
   },
+
+  esign: {
+    // Master switch. When false, the module loads but signing endpoints
+    // report the service as disabled instead of touching the token.
+    enabled: toBool(process.env.ESIGN_ENABLED),
+
+    // PKCS#11 access to the physical DSC token.
+    pkcs11: {
+      // Absolute path to the token vendor's PKCS#11 module.
+      //   SafeNet eToken : C:\Windows\System32\eTPKCS11.dll
+      //   WatchData      : C:\Windows\System32\Wdpkcs.dll
+      //   ePass2003      : C:\Windows\System32\eps2003csp11.dll
+      libPath: process.env.PKCS11_LIB_PATH || '',
+      // Token PIN. Keep in a secret store / env, never commit.
+      pin: process.env.PKCS11_PIN || '',
+      // Optional: pin to a specific slot index; otherwise first slot with a token.
+      slot: process.env.PKCS11_SLOT ? Number(process.env.PKCS11_SLOT) : undefined,
+      // Optional: select a specific signing cert/key on the token by label or id.
+      certLabel: process.env.PKCS11_CERT_LABEL || undefined,
+    },
+
+    // AES-256 key (base64, 32 bytes) for encrypting the DSC PIN at rest.
+    // When set, the PIN can be stored in the DB so operators aren't prompted.
+    encKey: process.env.ESIGN_ENC_KEY || '',
+
+    // Visible signature appearance on the PDF (PAdES).
+    appearance: {
+      reason: process.env.ESIGN_REASON || 'Digitally signed by broker backoffice',
+      location: process.env.ESIGN_LOCATION || '',
+      contactInfo: process.env.ESIGN_CONTACT || '',
+    },
+  },
 };
