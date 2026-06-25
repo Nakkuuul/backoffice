@@ -34,7 +34,10 @@ Today's date context in earlier sessions was 2026-06-25.
 ├── .gitignore          # root; patterns match backend/** too
 ├── .claude/  .idea/    # tooling/IDE
 ├── backend/            # the Node backoffice app + its infra (everything below)
-└── frontend/           # (future) the single UI
+└── frontend/           # the single UI — Next.js 16 + TS + Tailwind (App Router, src/)
+                        #   dev on :3001 (backend is :3000). NOTE: Next 16 differs
+                        #   from training data — read frontend/AGENTS.md + Next's
+                        #   node_modules/next/dist/docs/ before writing UI code.
 ```
 
 ```
