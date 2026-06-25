@@ -1,2 +1,4 @@
-# Local (inbound) domains Haraka accepts mail FOR.
-# Empty = pure outbound relay: we only SEND, we don't receive inbound mail.
+# Local (inbound) domains Haraka accepts mail FOR. Mail to these is forwarded
+# to the app webhook (bounces/complaints/replies). Mail to any other domain is
+# only accepted from trusted/relaying clients (our app) for outbound delivery.
+sapphirebroking.net

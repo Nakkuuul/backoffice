@@ -12,6 +12,12 @@
 
 const constants = require('haraka-constants');
 
+// Submission ports (MSA). Relaying is granted ONLY on these ports, and never
+// on the public MX port (25). This cleanly separates "our app sending out"
+// from "the internet delivering in", and guarantees the MX port can never be
+// abused as an open relay regardless of source IP.
+const SUBMISSION_PORTS = [2525, 587];
+
 exports.register = function () {
   // Extra explicit CIDRs allowed to relay (besides RFC1918/private). One per
   // line in config/relay_allow_hosts. Optional.
@@ -21,6 +27,8 @@ exports.register = function () {
 function isTrusted(plugin, connection) {
   const remote = connection.remote;
   if (!remote || !remote.ip) return false;
+  // Only on the submission port — inbound (:25) is never relaying.
+  if (!SUBMISSION_PORTS.includes(connection.local?.port)) return false;
   // Private/loopback addresses = our own host / Docker network.
   if (remote.is_private) return true;
   // Explicit allow-list (exact IP match; extend with CIDR if needed).

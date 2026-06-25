@@ -1,5 +1,12 @@
 import { NotFoundError } from '../../shared/errors/AppError.js';
 import * as service from './email.service.js';
+import { processInbound } from './email.inbound.js';
+
+/** POST /email/inbound — raw message forwarded from the MTA (machine-to-machine). */
+export async function inbound(req, res) {
+  const result = await processInbound(req.body);
+  res.status(202).json(result);
+}
 
 /** POST /email/send — enqueue an email for delivery. */
 export async function send(req, res) {

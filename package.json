@@ -21,6 +21,7 @@
     "email:worker": "node scripts/email-worker.mjs",
     "email:gen-dkim": "node scripts/gen-dkim.mjs",
     "email:test": "node scripts/test-email.mjs",
+    "email:test-inbound": "node scripts/test-inbound.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write ."
@@ -41,6 +42,7 @@
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.9.11",
     "nodemailer": "^9.0.1",
     "pdf-lib": "^1.17.1",
     "pg": "^8.12.0",

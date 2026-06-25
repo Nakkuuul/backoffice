@@ -108,6 +108,24 @@ email-service/
 | GET    | `/health`                  | Relay reachability + outbox status counts |
 | POST   | `/suppressions`            | Add address to suppression list (admin)   |
 | DELETE | `/suppressions/:address`   | Remove from suppression list (admin)      |
+| POST   | `/inbound`                 | MTA webhook for received mail (secret-auth, not JWT) |
+
+## Inbound mail (bounces / complaints / replies)
+
+The MTA accepts mail for our domain on :25 and forwards each message to
+`POST /api/v1/email/inbound` (authenticated with `EMAIL_INBOUND_SECRET`, not a
+JWT — it's machine-to-machine). `email.inbound.js` parses and classifies it:
+
+- **Permanent bounce** (DSN `Status: 5.x.x`) → address added to the suppression
+  list (`reason=bounce`). Transient `4.x.x` bounces are recorded but not suppressed.
+- **Complaint** (ARF feedback-report) → address suppressed (`reason=complaint`).
+- **Reply / other** → stored in `email_inbound` for audit.
+
+This closes the deliverability loop: addresses that bounce or complain are never
+emailed again, protecting sender reputation automatically.
+
+Test it locally (app + MTA running): `npm run email:test-inbound` submits a
+simulated DSN to the MTA and asserts the address gets suppressed.
 
 `POST /send` body:
 
@@ -151,8 +169,9 @@ SMTP_HOST=127.0.0.1 SMTP_PORT=2526 SMTP_SECURE=false \
 - [ ] **Object-storage attachments** — stream from `storage_ref` (documents
       module) instead of inline `bytea`; required for 100M scale.
 - [ ] **Outbox partitioning by day** + automated pruning of terminal rows.
-- [ ] **Bounce/complaint webhooks** — endpoint to ingest relay feedback and
-      auto-populate the suppression list (provider-specific).
+- [x] **Bounce/complaint ingestion** — MTA forwards inbound mail to
+      `/email/inbound`; permanent bounces + complaints auto-suppress. _Next:
+      richer ARF parsing, transient-bounce backoff tuning._
 - [ ] **Scheduled sends** — `send_at` column for the "daily batch" use case.
 - [ ] **Per-domain throttling** — honor different rate limits per recipient ISP.
 - [ ] **Templating** — richer template set + optional MJML/Handlebars if needed.

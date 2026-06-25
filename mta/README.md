@@ -39,6 +39,30 @@ broker's on-prem connection. Be aware of the hard physical limits — these are
 The software here is built correctly and will use every IP/throughput you give
 it — but it cannot manufacture IP reputation. Set expectations accordingly.
 
+## Ports & relay model (MSA vs MX)
+
+| Port | Role | Relaying? |
+| ---- | ---- | --------- |
+| **2525** | Submission from the backoffice app (bound to localhost) | **Yes** — trusted internal clients relay outbound |
+| **25** | Inbound MX from the internet (router forwards external :25 here) | **No** — only accepts mail *for* our domains; never relays elsewhere |
+
+`local_relay.js` grants relaying **only on the submission port** (2525) from a
+trusted/private client. Port 25 can never be used as an open relay regardless of
+source — verified: RCPT to an external domain on :25 returns `550`.
+
+## Inbound flow
+
+Mail arriving on :25 for a domain in `config/host_list` (e.g.
+`sapphirebroking.net`) is accepted (`rcpt_to.in_host_list`) and forwarded by the
+custom `inbound_forward` plugin to the app webhook
+(`inbound_forward.ini` → `POST /api/v1/email/inbound`, secret-authenticated).
+The app classifies bounces/complaints and auto-updates the suppression list.
+
+For real internet inbound to work you need:
+- **MX record**: `sapphirebroking.net MX 10 mail.sapphirebroking.net`
+- **Router/firewall**: forward external TCP/25 → this host's :25
+- Port 25 published in docker-compose (`25:25`)
+
 ## What's configured
 
 | File | Purpose |

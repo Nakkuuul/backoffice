@@ -122,6 +122,10 @@ export const config = {
       privateKeyPath: process.env.DKIM_PRIVATE_KEY_PATH || '',
     },
 
+    // Inbound mail (bounces/complaints/replies) forwarded from the MTA.
+    // The MTA must present this shared secret to POST /email/inbound.
+    inboundSecret: process.env.EMAIL_INBOUND_SECRET || '',
+
     // Outbox worker pool.
     worker: {
       enabled: process.env.EMAIL_WORKER_ENABLED ? toBool(process.env.EMAIL_WORKER_ENABLED) : true,

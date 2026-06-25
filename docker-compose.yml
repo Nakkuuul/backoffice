@@ -27,6 +27,11 @@ services:
     ports:
       # Submission port — exposed to localhost only (the app runs on the host).
       - "127.0.0.1:2525:2525"
+      # Inbound MX traffic from the internet (router forwards external :25 here).
+      - "25:25"
+    extra_hosts:
+      # Lets the inbound_forward plugin reach the app on the host.
+      - "host.docker.internal:host-gateway"
     volumes:
       - mta-queue:/haraka/queue
       # Live config + custom plugins (edit on host, restart to apply).
