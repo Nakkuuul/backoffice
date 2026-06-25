@@ -1,0 +1,195 @@
+# Taskfile.yml — Sapphire Broking Backoffice (monorepo control)
+# Requires go-task: https://taskfile.dev   (winget install Task.Task | brew install go-task)
+#
+#   task pull        update code + container images
+#   task bootstrap   one-time setup: deps, env, infra, migrations
+#   task up          bring the whole stack up (infra + backend + frontend)
+#
+# Output styling is centralized in the internal _section / _ok / _info helpers
+# so every command reads consistently.
+version: '3'
+
+silent: true
+
+vars:
+  CYAN: '\033[1;36m'
+  GREEN: '\033[1;32m'
+  YELLOW: '\033[1;33m'
+  RED: '\033[1;31m'
+  BOLD: '\033[1m'
+  DIM: '\033[2m'
+  RESET: '\033[0m'
+  RULE: '────────────────────────────────────────────────────────────'
+
+tasks:
+  # ── Public commands ────────────────────────────────────────────────────────
+
+  default:
+    desc: Show the available commands
+    cmds:
+      - |
+        printf '{{.CYAN}}\n'
+        printf '   ┌──────────────────────────────────────────────┐\n'
+        printf '   │   SAPPHIRE BROKING · BACKOFFICE                │\n'
+        printf '   │   {{.RESET}}{{.DIM}}on-prem monorepo — infra · backend · frontend{{.RESET}}{{.CYAN}}│\n'
+        printf '   └──────────────────────────────────────────────┘\n'
+        printf '{{.RESET}}\n'
+      - task --list
+
+  pull:
+    desc: Pull the latest code and container images
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Pulling latest changes', SUB: 'git + docker images' }
+      - |
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+          git pull --ff-only && printf '{{.GREEN}}  ✔{{.RESET}} repository up to date\n' \
+            || printf '{{.YELLOW}}  !{{.RESET}} git pull skipped (no upstream / not fast-forward)\n'
+        else
+          printf '{{.YELLOW}}  !{{.RESET}} not a git repository — skipping git pull\n'
+        fi
+      - task: _info
+        vars: { MSG: 'Refreshing container images (postgres, minio, haraka)…' }
+      - cd backend && docker compose pull
+      - task: _ok
+        vars: { MSG: 'Pull complete' }
+
+  bootstrap:
+    desc: One-time setup — install deps, prepare env, start infra, run migrations
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Bootstrapping the backoffice', SUB: 'first-time setup' }
+      - task: _prepare-env
+      - task: _info
+        vars: { MSG: 'Installing backend dependencies…' }
+      - cd backend && npm install --no-fund --no-audit
+      - task: _ok
+        vars: { MSG: 'Backend dependencies installed' }
+      - task: _info
+        vars: { MSG: 'Installing frontend dependencies…' }
+      - cd frontend && npm install --no-fund --no-audit
+      - task: _ok
+        vars: { MSG: 'Frontend dependencies installed' }
+      - task: _infra
+      - task: _summary
+        vars: { HEADLINE: 'Bootstrap complete — run: task up' }
+
+  up:
+    desc: Bring the whole stack up (infra + backend + frontend together)
+    cmds:
+      - task: _infra
+      - task: _section
+        vars: { TITLE: 'Launching application', SUB: 'backend :3000 · frontend :3001' }
+      - task: _summary
+        vars: { HEADLINE: 'Stack is starting — backend + frontend logs stream below (Ctrl-C stops)' }
+      # Run both dev servers concurrently via task's own parallel deps
+      # (portable process management — no shell job control needed).
+      - task: _serve
+
+  _serve:
+    internal: true
+    deps: [_backend-dev, _frontend-dev]
+
+  _backend-dev:
+    internal: true
+    dir: backend
+    cmds: [npm run dev]
+
+  _frontend-dev:
+    internal: true
+    dir: frontend
+    cmds: [npm run dev]
+
+  down:
+    desc: Stop the infrastructure containers
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Stopping infrastructure' }
+      - cd backend && docker compose down
+      - task: _ok
+        vars: { MSG: 'Infrastructure stopped (data volumes preserved)' }
+
+  status:
+    desc: Show infrastructure container status
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Infrastructure status' }
+      - cd backend && docker compose ps
+
+  urls:
+    desc: Show all service URLs and ports
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Service URLs & ports', SUB: 'local development' }
+      - |
+        printf '\n  {{.BOLD}}Application{{.RESET}}\n'
+        printf '    %-16s {{.CYAN}}http://localhost:3000/api/v1{{.RESET}}\n' 'Backend API'
+        printf '    %-16s {{.CYAN}}http://localhost:3000/api/v1/health/ready{{.RESET}}\n' 'Health check'
+        printf '    %-16s {{.CYAN}}http://localhost:3001{{.RESET}}\n' 'Frontend UI'
+        printf '\n  {{.BOLD}}Infrastructure (Docker){{.RESET}}\n'
+        printf '    %-16s {{.CYAN}}localhost:5432{{.RESET}}             {{.DIM}}db=backoffice  user=backoffice{{.RESET}}\n' 'PostgreSQL'
+        printf '    %-16s {{.CYAN}}http://localhost:9000{{.RESET}}      {{.DIM}}S3-compatible API{{.RESET}}\n' 'MinIO (storage)'
+        printf '    %-16s {{.CYAN}}http://localhost:9001{{.RESET}}      {{.DIM}}backoffice / backoffice_secret{{.RESET}}\n' 'MinIO console'
+        printf '    %-16s {{.CYAN}}localhost:2525{{.RESET}}             {{.DIM}}app → MTA (submission){{.RESET}}\n' 'Haraka MTA'
+        printf '    %-16s {{.CYAN}}localhost:25{{.RESET}}               {{.DIM}}inbound MX (bounces/replies){{.RESET}}\n' ' '
+        printf '\n'
+
+  # ── Internal helpers (consistent styling + shared steps) ───────────────────
+
+  _section:
+    internal: true
+    cmds:
+      - |
+        printf '\n{{.CYAN}}{{.RULE}}{{.RESET}}\n'
+        printf '{{.CYAN}}{{.BOLD}} ▸ %s{{.RESET}}  {{.DIM}}%s{{.RESET}}\n' '{{.TITLE}}' '{{.SUB}}'
+        printf '{{.CYAN}}{{.RULE}}{{.RESET}}\n'
+
+  _info:
+    internal: true
+    cmds:
+      - printf '{{.DIM}}  • %s{{.RESET}}\n' '{{.MSG}}'
+
+  _ok:
+    internal: true
+    cmds:
+      - printf '{{.GREEN}}  ✔{{.RESET}} %s\n' '{{.MSG}}'
+
+  _prepare-env:
+    internal: true
+    cmds:
+      - |
+        if [ ! -f backend/.env ]; then
+          cp backend/.env.example backend/.env
+          printf '{{.GREEN}}  ✔{{.RESET}} created backend/.env from template {{.YELLOW}}(review secrets before production){{.RESET}}\n'
+        else
+          printf '{{.GREEN}}  ✔{{.RESET}} backend/.env present\n'
+        fi
+
+  # Brings infra up, waits for health, applies migrations. Used by up + bootstrap.
+  _infra:
+    internal: true
+    cmds:
+      - task: _section
+        vars: { TITLE: 'Starting infrastructure', SUB: 'postgres · minio · haraka mta' }
+      - task: _info
+        vars: { MSG: 'Starting containers and waiting for health…' }
+      # docker compose --wait blocks until healthchecks pass (portable; no seq/sleep).
+      - cd backend && docker compose up -d --wait --wait-timeout 120 postgres minio mta
+      # one-shot bucket creator (kept out of --wait since it runs to completion).
+      - cd backend && docker compose up -d minio-setup
+      - task: _ok
+        vars: { MSG: 'Infrastructure healthy' }
+      - task: _info
+        vars: { MSG: 'Applying database migrations…' }
+      - cd backend && npm run migrate
+      - task: _ok
+        vars: { MSG: 'Database up to date' }
+
+  _summary:
+    internal: true
+    cmds:
+      - |
+        printf '\n{{.GREEN}}  ✔ %s{{.RESET}}\n\n' '{{.HEADLINE}}'
+        printf '   {{.BOLD}}Backend  API{{.RESET}}    {{.CYAN}}http://localhost:3000/api/v1{{.RESET}}\n'
+        printf '   {{.BOLD}}Frontend UI{{.RESET}}     {{.CYAN}}http://localhost:3001{{.RESET}}\n'
+        printf '   {{.BOLD}}MinIO console{{.RESET}}   {{.CYAN}}http://localhost:9001{{.RESET}}  {{.DIM}}(backoffice / backoffice_secret){{.RESET}}\n\n'

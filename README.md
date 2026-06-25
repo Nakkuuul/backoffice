@@ -10,14 +10,17 @@ CLAUDE.md   # full repo orientation — start here for context
 
 ## Quick start
 
+The whole stack is driven by [go-task](https://taskfile.dev) from the repo root:
+
 ```bash
-cd backend
-docker compose up -d        # postgres + minio + mta
-npm install
-cp .env.example .env        # configure (a working dev .env already exists)
-npm run migrate
-npm run dev                 # http://localhost:3000/api/v1/health/ready
+task bootstrap   # one-time: install deps, prepare env, start infra, migrate
+task up          # bring it all up — infra + backend (:3000) + frontend (:3001)
+task pull        # update code + container images
+task             # list all commands (also: task down, task status)
 ```
+
+Or run pieces manually from `backend/` (`docker compose up -d`, `npm run migrate`,
+`npm run dev`) — see `backend/README.md`.
 
 ## What's inside (backend)
 
