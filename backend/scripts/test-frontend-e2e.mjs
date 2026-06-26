@@ -8,6 +8,7 @@
  *   Requires: backend on :3000, frontend dev on :3001.
  *   node scripts/test-frontend-e2e.mjs
  */
+/* global document, location */ // referenced inside page.evaluate() (browser context)
 import { authenticator } from "otplib";
 import { pool } from "../src/db/pool.js";
 import { register } from "../src/modules/auth-service/auth.service.js";

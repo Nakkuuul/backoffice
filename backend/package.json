@@ -32,7 +32,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "auth:test": "node scripts/test-auth.mjs",
-    "auth:test-http": "node scripts/test-auth-http.mjs"
+    "auth:test-http": "node scripts/test-auth-http.mjs",
+    "company:test": "node scripts/test-company.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

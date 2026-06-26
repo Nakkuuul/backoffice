@@ -14,6 +14,7 @@
 export const PERMISSIONS = Object.freeze({
   users: ['users:read', 'users:manage'],
   clients: ['clients:read', 'clients:manage'],
+  company: ['company:read', 'company:manage'],
   esign: ['esign:read', 'esign:sign', 'esign:config'],
   email: ['email:read', 'email:send', 'email:suppress', 'email:config'],
   reports: ['reports:read', 'reports:generate', 'reports:bulk'],
@@ -50,6 +51,7 @@ export const ROLES = Object.freeze({
     permissions: [
       'users:read', 'users:manage',
       'clients:read', 'clients:manage',
+      'company:read', 'company:manage',
       'esign:read', 'esign:sign',
       'email:read', 'email:send', 'email:suppress',
       'reports:*',
@@ -63,7 +65,7 @@ export const ROLES = Object.freeze({
     type: USER_TYPE.BROKER,
     label: 'Accountant',
     description: 'Manage the chart of accounts and books; view financial statements.',
-    permissions: ['accounting:*', 'reports:read', 'documents:read', 'clients:read'],
+    permissions: ['accounting:*', 'reports:read', 'documents:read', 'clients:read', 'company:read'],
   },
   compliance: {
     type: USER_TYPE.BROKER,
@@ -75,7 +77,7 @@ export const ROLES = Object.freeze({
       'documents:read', 'documents:operate',
       'accounting:read',
       'kyc:read', 'kyc:verify',
-      'clients:read', 'audit:read',
+      'clients:read', 'company:read', 'audit:read',
     ],
   },
   operations: {
@@ -86,7 +88,7 @@ export const ROLES = Object.freeze({
       'reports:read', 'reports:generate', 'reports:bulk',
       'documents:read', 'documents:operate',
       'email:read', 'email:send',
-      'esign:read', 'clients:read',
+      'esign:read', 'clients:read', 'company:read',
       'kyc:read', 'kyc:manage', 'kyc:verify',
     ],
   },
@@ -94,14 +96,14 @@ export const ROLES = Object.freeze({
     type: USER_TYPE.BROKER,
     label: 'Support',
     description: 'Assist clients — view data and re-send communications.',
-    permissions: ['clients:read', 'reports:read', 'documents:read', 'email:read', 'email:send'],
+    permissions: ['clients:read', 'company:read', 'reports:read', 'documents:read', 'email:read', 'email:send'],
   },
   auditor: {
     type: USER_TYPE.BROKER,
     label: 'Auditor',
     description: 'Read-only access across the backoffice for audit.',
     permissions: [
-      'users:read', 'clients:read', 'esign:read', 'email:read',
+      'users:read', 'clients:read', 'company:read', 'esign:read', 'email:read',
       'reports:read', 'documents:read', 'accounting:read', 'kyc:read', 'audit:read',
     ],
   },

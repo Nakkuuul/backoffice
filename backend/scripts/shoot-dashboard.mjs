@@ -3,6 +3,7 @@
  * dashboard shell: overview, a section page, command palette, collapsed rail,
  * mobile drawer. Deletes the user afterwards. node scripts/shoot-dashboard.mjs
  */
+/* global document, location */ // referenced inside page.evaluate() (browser context)
 import { authenticator } from "otplib";
 import { pool } from "../src/db/pool.js";
 import { register } from "../src/modules/auth-service/auth.service.js";
