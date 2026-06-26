@@ -57,11 +57,15 @@ try {
   await page.screenshot({ path: `${OUT}/dash-overview.png` });
   console.log("shot dash-overview");
 
-  // Section page (expand Accounting → Balance Sheet)
-  await clickText(page, "Accounting");
-  await wait(400);
-  await clickText(page, "Balance Sheet");
-  await page.waitForFunction(() => location.pathname.includes("balance-sheet"), { timeout: 20000 }).catch(() => {});
+  // Masters section expanded (the long nested list)
+  await clickText(page, "Masters");
+  await wait(450);
+  await page.screenshot({ path: `${OUT}/dash-masters.png` });
+  console.log("shot dash-masters");
+
+  // Section page (Masters → Securities)
+  await clickText(page, "Securities");
+  await page.waitForFunction(() => location.pathname.includes("securities"), { timeout: 20000 }).catch(() => {});
   await wait(900);
   await page.screenshot({ path: `${OUT}/dash-section.png` });
   console.log("shot dash-section");

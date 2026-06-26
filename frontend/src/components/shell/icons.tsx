@@ -2,6 +2,12 @@ import type { IconName } from "@/lib/nav/manifest";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <path d="M4 11 12 4l8 7M6 9.5V20h12V9.5M10 20v-5h4v5" />,
+  masters: (
+    <>
+      <rect x="4" y="3.5" width="16" height="17" rx="1.6" />
+      <path d="M4 9.2h16M4 14.7h16M10 6.3h4M10 11.9h4M10 17.4h4" />
+    </>
+  ),
   clients: (
     <>
       <path d="M3 20h18M5 20V9l7-4 7 4v11" />

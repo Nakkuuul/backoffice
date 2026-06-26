@@ -6,6 +6,7 @@
  */
 export type IconName =
   | "home"
+  | "masters"
   | "clients"
   | "ekyc"
   | "accounting"
@@ -37,13 +38,26 @@ export const NAV: NavSection[] = [
   { key: "overview", label: "Overview", icon: "home", href: "/overview" },
 
   {
-    key: "clients",
-    label: "Clients",
-    icon: "clients",
+    key: "masters",
+    label: "Masters",
+    icon: "masters",
     anyPermission: ["clients:read", "clients:manage"],
     children: [
-      { label: "Directory", href: "/clients", anyPermission: ["clients:read"], soon: true },
-      { label: "New client", href: "/clients/new", anyPermission: ["clients:manage"], soon: true },
+      { label: "Clients", href: "/masters/clients", anyPermission: ["clients:read"] },
+      { label: "General Accounts", href: "/masters/general-accounts", anyPermission: ["clients:read"] },
+      { label: "Brokerages", href: "/masters/brokerages", anyPermission: ["clients:read"] },
+      { label: "Statutory Charges", href: "/masters/statutory-charges", anyPermission: ["clients:read"] },
+      { label: "Our DPs", href: "/masters/our-dps", anyPermission: ["clients:read"] },
+      { label: "DP", href: "/masters/dp", anyPermission: ["clients:read"] },
+      { label: "Securities", href: "/masters/securities", anyPermission: ["clients:read"] },
+      { label: "Collateral Type Definition", href: "/masters/collateral-types", anyPermission: ["clients:read"] },
+      { label: "Settlements", href: "/masters/settlements", anyPermission: ["clients:read"] },
+      { label: "Branches", href: "/masters/branches", anyPermission: ["clients:read"] },
+      { label: "Authorised Persons", href: "/masters/authorised-persons", anyPermission: ["clients:read"] },
+      { label: "Group / Family", href: "/masters/group-family", anyPermission: ["clients:read"] },
+      { label: "Holidays", href: "/masters/holidays", anyPermission: ["clients:read"] },
+      { label: "CTCL", href: "/masters/ctcl", anyPermission: ["clients:read"] },
+      { label: "Company Info", href: "/masters/company-info", anyPermission: ["clients:read"] },
     ],
   },
   {
