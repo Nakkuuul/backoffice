@@ -7,7 +7,7 @@ import {
   DEPOSITORIES,
   DP_MODES,
   CLEARING_MODES,
-} from './company.constants.js';
+} from './broker-info.constants.js';
 
 const optEmail = z.union([z.email(), z.literal('')]).optional();
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'use YYYY-MM-DD');

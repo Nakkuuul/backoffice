@@ -2,7 +2,7 @@ import { Router } from 'express';
 import healthRoutes from '../../modules/health/health.routes.js';
 import authRoutes from '../../modules/auth-service/auth.routes.js';
 import { userRoutes } from '../../modules/user-service/user.routes.js';
-import companyRoutes from '../../modules/company-service/company.routes.js';
+import brokerInfoRoutes from '../../modules/broker-info-service/broker-info.routes.js';
 import esignRoutes from '../../modules/esign-service/esign.routes.js';
 import emailRoutes from '../../modules/email-service/email.routes.js';
 import reportsRoutes from '../../modules/reports-service/reports.routes.js';
@@ -18,7 +18,9 @@ const router = Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-router.use('/company', companyRoutes);
+// Broker's own entity profile (broker-info-service). Public API path kept as
+// /company for frontend compatibility.
+router.use('/company', brokerInfoRoutes);
 router.use('/esign', esignRoutes);
 router.use('/email', emailRoutes);
 router.use('/reports', reportsRoutes);

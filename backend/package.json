@@ -33,9 +33,9 @@
     "format": "prettier --write .",
     "auth:test": "node scripts/test-auth.mjs",
     "auth:test-http": "node scripts/test-auth-http.mjs",
-    "company:test": "node scripts/test-company.mjs",
     "auth:test-reset": "node scripts/test-password-reset.mjs",
-    "auth:test-reset-fe": "node scripts/test-reset-frontend-e2e.mjs"
+    "auth:test-reset-fe": "node scripts/test-reset-frontend-e2e.mjs",
+    "broker-info:test": "node scripts/test-broker-info.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

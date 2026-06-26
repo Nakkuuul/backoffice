@@ -2,16 +2,16 @@ import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler.js';
 import { validate } from '../../api/middlewares/validate.js';
 import { authenticate, requirePermission } from '../../api/middlewares/authenticate.js';
-import * as controller from './company.controller.js';
+import * as controller from './broker-info.controller.js';
 import {
   updateCompanySchema,
   membershipCreateSchema,
   membershipUpdateSchema,
   idParamSchema,
-} from './company.validation.js';
+} from './broker-info.validation.js';
 
 /**
- * company-service — `/api/v1/company`. The broker's own entity profile (singleton)
+ * broker-info-service — `/api/v1/company`. The broker's own entity profile (singleton)
  * + structured exchange memberships. Read is broad (company:read); edits require
  * company:manage.
  */

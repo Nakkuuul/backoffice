@@ -1,5 +1,5 @@
 import { NotFoundError } from '../../shared/errors/AppError.js';
-import * as repo from './company.repository.js';
+import * as repo from './broker-info.repository.js';
 
 const ymd = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 

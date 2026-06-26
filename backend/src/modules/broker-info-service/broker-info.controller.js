@@ -1,4 +1,4 @@
-import * as service from './company.service.js';
+import * as service from './broker-info.service.js';
 
 /** GET /company → { profile, memberships, activeSegments } */
 export async function getCompany(_req, res) {
