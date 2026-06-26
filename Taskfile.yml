@@ -51,8 +51,9 @@ tasks:
     cmds:
       - task: _infra
       - 'node scripts/ui.mjs section "Launching application" "backend 3000 + frontend 3001"'
-      - 'node scripts/ui.mjs summary "Stack is starting — backend + frontend logs stream below (Ctrl-C stops)"'
-      - task: _serve
+      # dev.mjs runs both servers with prefixed logs and prints a clear
+      # "what's up where" panel once both report ready.
+      - 'node scripts/dev.mjs'
 
   down:
     desc: Stop the infrastructure containers
@@ -88,17 +89,3 @@ tasks:
       - cd backend && npm run migrate
       - 'node scripts/ui.mjs ok "Database up to date"'
 
-  # Run both dev servers concurrently via task's own parallel deps (portable).
-  _serve:
-    internal: true
-    deps: [_backend-dev, _frontend-dev]
-
-  _backend-dev:
-    internal: true
-    dir: backend
-    cmds: [npm run dev]
-
-  _frontend-dev:
-    internal: true
-    dir: frontend
-    cmds: [npm run dev]
