@@ -112,7 +112,10 @@ export default function LoginPage() {
         <div
           aria-hidden="true"
           className="sb-reveal relative space-y-1 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-muted"
-          style={{ ["--sb-delay" as string]: "440ms" }}
+          style={{
+            ["--sb-delay" as string]: "440ms",
+            textShadow: "0 0 12px var(--color-paper), 0 0 8px var(--color-paper)",
+          }}
         >
           <p>SEBI REG · INZ000XXXXXX · MEMBER NSE / BSE · EST. 2019</p>
           <p className="text-ink-muted/70">
