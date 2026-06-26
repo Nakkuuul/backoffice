@@ -4,12 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { pool } from '../src/db/pool.js';
-import { createUser, login, me } from '../src/modules/user-service/user.service.js';
-import {
-  hasPermission,
-  effectivePermissions,
-  ALL_PERMISSIONS,
-} from '../src/modules/user-service/rbac.js';
+import { register as createUser, login, me } from '../src/modules/auth-service/auth.service.js';
+import { hasPermission, effectivePermissions, ALL_PERMISSIONS } from '../src/shared/rbac.js';
 
 const ts = Date.now();
 const pw = 'password123';

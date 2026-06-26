@@ -1,9 +1,14 @@
 # user-service
 
-Manages everyone who accesses the backoffice — broker-side staff and client-side
-logins — with **role-based access control (RBAC)**. There's a single UI; the
-backend tells the frontend *what the user may do* (effective permissions), and
-also **enforces** it on every endpoint.
+> **Note:** Authentication + registration moved to **`auth-service`** (`/auth`).
+> This module now **administers existing users** (`/users`) and owns the RBAC
+> catalog (now at `src/shared/rbac.js`). Login/`me`/register/change-password are
+> in auth-service.
+
+Defines the **role-based access control (RBAC)** model and administers user
+records — broker-side staff and client-side logins. There's a single UI; the
+backend tells the frontend *what the user may do* (effective permissions from
+`GET /auth/me`), and also **enforces** it on every endpoint.
 
 ## Two scopes
 

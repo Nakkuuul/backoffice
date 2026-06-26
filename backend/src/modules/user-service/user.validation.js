@@ -1,21 +1,5 @@
 import Joi from 'joi';
-import { ROLE_NAMES } from './rbac.js';
-
-export const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(1).max(256).required(),
-});
-
-export const createUserSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(8).max(256).required(),
-  fullName: Joi.string().max(160).required(),
-  role: Joi.string()
-    .valid(...ROLE_NAMES)
-    .required(),
-  clientRef: Joi.string().max(128), // required for client role (checked in service)
-  phone: Joi.string().max(32),
-});
+import { ROLE_NAMES } from '../../shared/rbac.js';
 
 export const updateUserSchema = Joi.object({
   fullName: Joi.string().max(160),
@@ -24,11 +8,6 @@ export const updateUserSchema = Joi.object({
   isActive: Joi.boolean(),
   clientRef: Joi.string().max(128),
 }).min(1);
-
-export const changePasswordSchema = Joi.object({
-  currentPassword: Joi.string().min(1).max(256).required(),
-  newPassword: Joi.string().min(8).max(256).required(),
-});
 
 export const resetPasswordSchema = Joi.object({
   newPassword: Joi.string().min(8).max(256).required(),

@@ -1,7 +1,7 @@
 import { query } from '../../db/pool.js';
 
 const PUBLIC_COLS = `id, email, full_name, role, user_type, client_ref, phone,
-  is_active, last_login_at, created_at`;
+  is_active, must_change_password, last_login_at, created_at`;
 
 export async function findByEmail(email) {
   const { rows } = await query(`SELECT * FROM users WHERE lower(email) = lower($1)`, [email]);
@@ -21,8 +21,8 @@ export async function findFullById(id) {
 
 export async function create(user) {
   const { rows } = await query(
-    `INSERT INTO users (email, password_hash, full_name, role, user_type, client_ref, phone, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `INSERT INTO users (email, password_hash, full_name, role, user_type, client_ref, phone, created_by, must_change_password)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      RETURNING ${PUBLIC_COLS}`,
     [
       user.email.toLowerCase(),
@@ -33,6 +33,7 @@ export async function create(user) {
       user.clientRef ?? null,
       user.phone ?? null,
       user.createdBy ?? null,
+      user.mustChangePassword ?? false,
     ],
   );
   return rows[0];
@@ -59,11 +60,16 @@ export async function update(id, fields) {
   return rows[0] ?? null;
 }
 
-export async function setPassword(id, passwordHash) {
-  await query(`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, [
-    id,
-    passwordHash,
-  ]);
+/**
+ * Set a user's password. `mustChange` controls the forced-change flag:
+ *   - self-service change → false (clears it)
+ *   - admin reset         → true  (forces change on next login)
+ */
+export async function setPassword(id, passwordHash, mustChange = false) {
+  await query(
+    `UPDATE users SET password_hash = $2, must_change_password = $3, updated_at = now() WHERE id = $1`,
+    [id, passwordHash, mustChange],
+  );
 }
 
 export async function touchLogin(id) {

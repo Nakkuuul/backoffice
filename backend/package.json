@@ -30,7 +30,9 @@
     "test:integration": "node scripts/test-integration.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "auth:test": "node scripts/test-auth.mjs",
+    "auth:test-http": "node scripts/test-auth-http.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

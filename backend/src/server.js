@@ -3,6 +3,7 @@ import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { pool } from './db/pool.js';
 import { initStorage } from './shared/storage/index.js';
+import { initAuthService } from './modules/auth-service/auth.init.js';
 import { initEmailService, stopEmailService } from './modules/email-service/email.init.js';
 import { initReportsService, stopReportsService } from './modules/reports-service/reports.init.js';
 import { initDocumentService } from './modules/document-service/document.init.js';
@@ -16,6 +17,7 @@ async function start() {
   // Wire email-service into esign-service and (optionally) start the in-process
   // outbox worker. Disable the worker here and run a separate fleet at scale.
   await initStorage(); // ensure the object-storage bucket exists before modules use it
+  await initAuthService(); // seed the master user on first boot
   initEmailService();
   initReportsService();
   initDocumentService();

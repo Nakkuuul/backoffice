@@ -4,8 +4,8 @@
  * e.g. node scripts/create-user.mjs admin@sapphirebroking.net 'StrongPass#1' super_admin
  */
 import { pool } from '../src/db/pool.js';
-import { createUser } from '../src/modules/user-service/user.service.js';
-import { ROLE_NAMES } from '../src/modules/user-service/rbac.js';
+import { register } from '../src/modules/auth-service/auth.service.js';
+import { ROLE_NAMES } from '../src/shared/rbac.js';
 
 const [email, password, role, clientRef, fullName] = process.argv.slice(2);
 if (!email || !password || !role) {
@@ -15,8 +15,8 @@ if (!email || !password || !role) {
 }
 
 try {
-  const user = await createUser({ email, password, role, clientRef, fullName: fullName || email });
-  console.log('✅ created user:', user);
+  const user = await register({ email, password, role, clientRef, fullName: fullName || email });
+  console.log('✅ created user (must change password on first login):', user);
 } catch (err) {
   console.error('❌', err.message);
   process.exitCode = 1;

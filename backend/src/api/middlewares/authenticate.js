@@ -1,13 +1,19 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../../config/index.js';
 import { UnauthorizedError, ForbiddenError } from '../../shared/errors/AppError.js';
-import { hasPermission } from '../../modules/user-service/rbac.js';
+import { hasPermission } from '../../shared/rbac.js';
 
 const SUPER_ADMIN = 'super_admin';
 
+// Endpoints a user with a pending forced password change may still reach
+// (so they can complete the reset, read their own state, or log out).
+const PWD_CHANGE_EXEMPT = ['/auth/change-password', '/auth/me', '/auth/logout'];
+
 /**
- * Verifies the `Authorization: Bearer <token>` header and attaches the
- * decoded payload to `req.user` ({ id, role, type, clientRef }).
+ * Verifies the `Authorization: Bearer <token>` header and attaches the decoded
+ * payload to `req.user` ({ id, role, type, clientRef, mcp }). When the token
+ * carries `mcp` (must-change-password), all routes are blocked with a clear
+ * 403 PASSWORD_CHANGE_REQUIRED except the password-change flow.
  */
 export function authenticate(req, _res, next) {
   const header = req.headers.authorization || '';
@@ -17,12 +23,28 @@ export function authenticate(req, _res, next) {
     return next(new UnauthorizedError('Missing or malformed Authorization header'));
   }
 
+  let payload;
   try {
-    req.user = jwt.verify(token, config.auth.jwtSecret);
-    next();
+    payload = jwt.verify(token, config.auth.jwtSecret);
   } catch {
-    next(new UnauthorizedError('Invalid or expired token'));
+    return next(new UnauthorizedError('Invalid or expired token'));
   }
+  req.user = payload;
+
+  if (payload.mcp) {
+    // Match on the PATH ONLY (strip query string) with an exact suffix check,
+    // so an exempt path can't be smuggled via `?x=/auth/me` (substring bypass).
+    const path = req.originalUrl.split('?')[0];
+    const exempt = PWD_CHANGE_EXEMPT.some((p) => path === p || path.endsWith(p));
+    if (!exempt) {
+      return next(
+        new ForbiddenError('Password change required before continuing', {
+          code: 'PASSWORD_CHANGE_REQUIRED',
+        }),
+      );
+    }
+  }
+  next();
 }
 
 /** Role-based guard. super_admin always passes. Use after `authenticate`. */

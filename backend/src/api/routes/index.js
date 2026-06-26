@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import healthRoutes from '../../modules/health/health.routes.js';
-import { authRoutes, userRoutes } from '../../modules/user-service/user.routes.js';
+import authRoutes from '../../modules/auth-service/auth.routes.js';
+import { userRoutes } from '../../modules/user-service/user.routes.js';
 import esignRoutes from '../../modules/esign-service/esign.routes.js';
 import emailRoutes from '../../modules/email-service/email.routes.js';
 import reportsRoutes from '../../modules/reports-service/reports.routes.js';

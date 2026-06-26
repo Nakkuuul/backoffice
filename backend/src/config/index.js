@@ -42,6 +42,17 @@ export const config = {
   auth: {
     jwtSecret: required('JWT_SECRET', 'dev_only_insecure_secret'),
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
+    // Access JWT lifetime (short in real use; defaults to the legacy value).
+    accessTtl: process.env.AUTH_ACCESS_TTL || process.env.JWT_EXPIRES_IN || '1d',
+    // Refresh-token lifetime (revocable session stored in auth_sessions).
+    refreshTtl: process.env.AUTH_REFRESH_TTL || '30d',
+    // Master user, seeded on first boot when no super_admin exists. Created with
+    // must_change_password=true so its first login forces a password reset.
+    master: {
+      email: process.env.AUTH_MASTER_EMAIL || 'admin@sapphirebroking.net',
+      password: process.env.AUTH_MASTER_PASSWORD || 'ChangeMe@Master1',
+      name: process.env.AUTH_MASTER_NAME || 'Master Administrator',
+    },
   },
 
   cors: {

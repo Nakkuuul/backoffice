@@ -155,7 +155,7 @@ MinIO console: http://localhost:9001 (`backoffice` / `backoffice_secret`).
 - **Adding a module:** create `src/modules/<name>/`, follow the layered files,
   guard routes with `requirePermission`, mount it in `src/api/routes/index.js`,
   add any boot wiring to `server.js`, add migration `NNN_*.sql`, add RBAC perms
-  in `user-service/rbac.js`, write a `scripts/test-*.mjs`, and a module README.
+  in `src/shared/rbac.js`, write a `scripts/test-*.mjs`, and a module README.
 
 ---
 
@@ -166,13 +166,23 @@ All mounted under `/api/v1`. All require auth except the two secret webhooks.
 ### health — `/health` (live)
 `/live`, `/ready` (ready also pings DB). No auth.
 
-### user-service — `/auth`, `/users` (live)
-Users + JWT auth (bcrypt) + **RBAC**. Two scopes: **broker** staff and
-**client**. Roles & permissions are **code-defined** in `rbac.js` (not a DB
-table) — see §8. `GET /auth/me` returns `{user, permissions}` (the UI reads this
-to show/hide features). `/users` is admin-guarded (`users:read`/`users:manage`).
-`/users/roles` returns the catalog for the frontend. JWT payload:
-`{ id, role, type, clientRef }`. CLI: `npm run user:create`.
+### auth-service — `/auth` (live)
+Owns **authentication + registration**. **Access JWT** (short, `AUTH_ACCESS_TTL`,
+payload `{id, role, type, clientRef, mcp}`) + **refresh tokens** (random, stored
+SHA-256-hashed in `auth_sessions`, rotated on refresh, revocable). Endpoints:
+`login`, `refresh`, `logout`, `me`, `change-password`, `register` (admin-gated
+`users:manage`). **Master user** is seeded on first boot (`initAuthService`,
+idempotent) with `must_change_password=true`. **Forced first-login change**: the
+`mcp` claim makes `authenticate` block every route with `403
+PASSWORD_CHANGE_REQUIRED` except change-password/me/logout until the user resets.
+`change-password` clears the flag, revokes all sessions, issues fresh tokens.
+Tests: `auth:test`, `auth:test-http`. CLI: `npm run user:create`.
+
+### user-service — `/users` (live)
+**Administers** existing users (list/get/update/deactivate, `reset-password` →
+forces change, `/users/roles` catalog). Auth itself is in auth-service. RBAC is
+code-defined in `src/shared/rbac.js` (two scopes: **broker** staff, **client**) —
+see §8. Guarded by `users:read` / `users:manage`.
 
 ### esign-service — `/esign` (live; needs hardware)
 Signs PDFs (PAdES, `adbe.pkcs7.detached`) with a **physical DSC token** over
@@ -232,7 +242,7 @@ now; NSDL/UIDAI/penny-drop later). Documents in MinIO. Full Aadhaar never stored
 
 ---
 
-## 8. RBAC (user-service/rbac.js)
+## 8. RBAC (src/shared/rbac.js)
 
 Code-defined catalog. **Permissions** are `domain:action` with wildcards (`*`,
 `reports:*`). Enforced by `requirePermission(...)` (and `authorize(...roles)`;
@@ -257,8 +267,9 @@ Code-defined catalog. **Permissions** are `domain:action` with wildcards (`*`,
 Migrations (`backend/src/db/migrations`, applied by `npm run migrate`):
 `001_init` (users), `002_esign`, `003_esign_settings`, `004_email_service`,
 `005_email_inbound`, `006_reports`, `007_documents`, `008_user_rbac`,
-`009_accounting_masters`, `010_ekyc`. Simple forward-only runner tracking
-`schema_migrations`. **No down migrations.**
+`009_accounting_masters`, `010_ekyc`, `011_auth` (must_change_password +
+auth_sessions). Simple forward-only runner tracking `schema_migrations`. **No
+down migrations.**
 
 Gotcha seen: `users.id` sequence drifted because an early test inserted an
 explicit `id=1`; resync with

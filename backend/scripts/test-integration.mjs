@@ -98,8 +98,8 @@ const eh = await api('GET', '/email/health', admin);
 check('email-service: health', eh.status === 200, `transport.ok=${eh.json.transport?.ok}`);
 
 // 10) RBAC enforcement across modules
-const opsUsers = await api('POST', '/users', ops, { email: 'x@y.net', password: 'Xpass#1234', fullName: 'X', role: 'support' });
-check('RBAC: operations denied users:manage', opsUsers.status === 403);
+const opsUsers = await api('POST', '/auth/register', ops, { email: 'x@y.net', password: 'Xpass#1234', fullName: 'X', role: 'support' });
+check('RBAC: operations denied users:manage (register)', opsUsers.status === 403);
 const clientGen = await api('POST', '/reports/generate', client, { reportType: 'client-ledger', format: 'pdf' });
 check('RBAC: client denied reports:generate', clientGen.status === 403);
 const opsRead = await api('GET', '/reports?limit=1', ops);
