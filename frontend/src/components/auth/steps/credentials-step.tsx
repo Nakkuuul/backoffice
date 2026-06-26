@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Field, PasswordField } from "../field";
 import { SubmitButton } from "../submit-button";
 import { StepHeader } from "../step-chrome";
@@ -62,8 +63,8 @@ export function CredentialsStep({ loading, initialEmail = "", onSubmit }: Creden
             />
             Keep me signed in
           </label>
-          <a
-            href="#"
+          <Link
+            href="/forgot-password"
             className="group relative text-[13px] font-medium text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oxblood focus-visible:ring-offset-2 focus-visible:ring-offset-paper-raised"
           >
             Forgot access?
@@ -71,7 +72,7 @@ export function CredentialsStep({ loading, initialEmail = "", onSubmit }: Creden
               aria-hidden="true"
               className="sb-link-underline absolute inset-x-0 -bottom-0.5 h-px bg-gold"
             />
-          </a>
+          </Link>
         </div>
 
         <SubmitButton loading={loading} label="Sign in" loadingLabel="Authorising…" />
