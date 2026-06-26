@@ -92,7 +92,7 @@ login(email,password)
   the `super_admin` role; a non-super_admin cannot modify or reset a super_admin;
   nobody can change their own role/active status via the admin endpoints.
 - RBAC enforced on `register` (`users:manage`); `super_admin` bypasses role checks.
-- All SQL is parameterized; Joi validates + strips unknown fields (no mass-assignment
+- All SQL is parameterized; Zod validates + strips unknown fields (no mass-assignment
   of `role`/`is_active`/`must_change_password`/`created_by`).
 - Client users always keep a `clientRef` (enforced on register **and** update).
 - The interim-token gate is **stage-exact** (router-relative path match) — a

@@ -70,7 +70,7 @@ backend/
 
 **Module file convention** (every module follows this layered pattern):
 `*.routes.js → *.controller.js → *.service.js → *.repository.js`, plus
-`*.validation.js` (Joi), `*.constants.js`, and a `*.init.js` when it needs
+`*.validation.js` (Zod), `*.constants.js`, and a `*.init.js` when it needs
 boot-time wiring (port registration / workers). Routes guard with
 `requirePermission(...)`; controllers are thin; services hold logic; repositories
 hold all SQL.
@@ -79,7 +79,7 @@ hold all SQL.
 
 ## 3. Tech stack
 
-- Node 20+ (ESM, `"type":"module"`), Express 4, PostgreSQL (`pg`), Joi, pino.
+- Node 20+ (ESM, `"type":"module"`), Express 4, PostgreSQL (`pg`), Zod, pino.
 - Auth: `jsonwebtoken` + `bcryptjs`.
 - Storage: MinIO (S3-compatible) via `@aws-sdk/client-s3`.
 - eSign: `graphene-pk11` (PKCS#11) + `pkijs`/`asn1js` (CMS) + `@signpdf/*` + `pdf-lib`.

@@ -1,45 +1,54 @@
-import Joi from 'joi';
+import { z } from 'zod';
 
-const emailArray = Joi.array().items(Joi.string().email()).min(1);
+const emailArray = z.array(z.email()).min(1);
+const jsonObject = z.record(z.string(), z.unknown());
 
 /** POST /email/send — enqueue an email. */
-export const sendSchema = Joi.object({
-  to: emailArray.required(),
-  cc: Joi.array().items(Joi.string().email()),
-  bcc: Joi.array().items(Joi.string().email()),
-  replyTo: Joi.string().email(),
-  subject: Joi.string().max(255),
-  html: Joi.string().max(500_000),
-  text: Joi.string().max(500_000),
-  template: Joi.string().max(64),
-  templateData: Joi.object(),
-  priority: Joi.number().integer().min(1).max(9).default(5),
-  idempotencyKey: Joi.string().max(255),
-  sourceModule: Joi.string().max(64),
-  sourceRef: Joi.string().max(255),
-  headers: Joi.object().pattern(Joi.string(), Joi.string()),
-  attachments: Joi.array().items(
-    Joi.object({
-      filename: Joi.string().max(255).required(),
-      contentBase64: Joi.string().base64(),
-      storageRef: Joi.string().max(1024),
-      contentType: Joi.string().max(128),
-    }).or('contentBase64', 'storageRef'),
-  ),
-})
-  .or('html', 'text', 'template')
-  .messages({ 'object.missing': 'Provide one of html, text, or template' });
+export const sendSchema = z
+  .object({
+    to: emailArray,
+    cc: z.array(z.email()).optional(),
+    bcc: z.array(z.email()).optional(),
+    replyTo: z.email().optional(),
+    subject: z.string().min(1).max(255).optional(),
+    html: z.string().min(1).max(500_000).optional(),
+    text: z.string().min(1).max(500_000).optional(),
+    template: z.string().min(1).max(64).optional(),
+    templateData: jsonObject.optional(),
+    priority: z.coerce.number().int().min(1).max(9).default(5),
+    idempotencyKey: z.string().min(1).max(255).optional(),
+    sourceModule: z.string().min(1).max(64).optional(),
+    sourceRef: z.string().min(1).max(255).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
+    attachments: z
+      .array(
+        z
+          .object({
+            filename: z.string().min(1).max(255),
+            contentBase64: z.base64().optional(),
+            storageRef: z.string().min(1).max(1024).optional(),
+            contentType: z.string().min(1).max(128).optional(),
+          })
+          .refine((a) => a.contentBase64 !== undefined || a.storageRef !== undefined, {
+            message: 'attachment requires contentBase64 or storageRef',
+          }),
+      )
+      .optional(),
+  })
+  .refine((o) => o.html !== undefined || o.text !== undefined || o.template !== undefined, {
+    message: 'Provide one of html, text, or template',
+  });
 
-export const listSchema = Joi.object({
-  status: Joi.string().valid('queued', 'sending', 'sent', 'deferred', 'failed', 'suppressed'),
-  limit: Joi.number().integer().min(1).max(100).default(20),
-  offset: Joi.number().integer().min(0).default(0),
+export const listSchema = z.object({
+  status: z.enum(['queued', 'sending', 'sent', 'deferred', 'failed', 'suppressed']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const idParamSchema = Joi.object({ id: Joi.number().integer().positive().required() });
+export const idParamSchema = z.object({ id: z.coerce.number().int().positive() });
 
-export const suppressionSchema = Joi.object({
-  address: Joi.string().email().required(),
-  reason: Joi.string().valid('bounce', 'complaint', 'unsubscribe', 'manual').default('manual'),
-  detail: Joi.string().max(1000),
+export const suppressionSchema = z.object({
+  address: z.email(),
+  reason: z.enum(['bounce', 'complaint', 'unsubscribe', 'manual']).default('manual'),
+  detail: z.string().min(1).max(1000).optional(),
 });

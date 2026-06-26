@@ -1,30 +1,31 @@
-import Joi from 'joi';
+import { z } from 'zod';
+
+const jsonObject = z.record(z.string(), z.unknown());
 
 /** POST /reports/generate — on-demand single report. */
-export const generateSchema = Joi.object({
-  reportType: Joi.string().max(64).required(),
-  format: Joi.string().valid('pdf', 'csv', 'xlsx', 'html').required(),
-  params: Joi.object().default({}),
+export const generateSchema = z.object({
+  reportType: z.string().min(1).max(64),
+  format: z.enum(['pdf', 'csv', 'xlsx', 'html']),
+  params: jsonObject.default({}),
   // If true, return the file inline; else return the job record (id) only.
-  download: Joi.boolean().default(true),
+  download: z.boolean().default(true),
 });
 
 /** POST /reports/bulk — enqueue many jobs. */
-export const bulkSchema = Joi.object({
-  reportType: Joi.string().max(64).required(),
-  format: Joi.string().valid('pdf', 'csv', 'xlsx', 'html').required(),
-  items: Joi.array()
-    .items(Joi.object({ clientRef: Joi.string().max(128).required(), params: Joi.object() }))
+export const bulkSchema = z.object({
+  reportType: z.string().min(1).max(64),
+  format: z.enum(['pdf', 'csv', 'xlsx', 'html']),
+  items: z
+    .array(z.object({ clientRef: z.string().min(1).max(128), params: jsonObject.optional() }))
     .min(1)
-    .max(100000)
-    .required(),
+    .max(100000),
 });
 
-export const listSchema = Joi.object({
-  status: Joi.string().valid('pending', 'generating', 'ready', 'failed'),
-  reportType: Joi.string().max(64),
-  limit: Joi.number().integer().min(1).max(100).default(20),
-  offset: Joi.number().integer().min(0).default(0),
+export const listSchema = z.object({
+  status: z.enum(['pending', 'generating', 'ready', 'failed']).optional(),
+  reportType: z.string().min(1).max(64).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const idParamSchema = Joi.object({ id: Joi.number().integer().positive().required() });
+export const idParamSchema = z.object({ id: z.coerce.number().int().positive() });

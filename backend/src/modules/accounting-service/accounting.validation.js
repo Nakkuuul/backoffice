@@ -1,43 +1,47 @@
-import Joi from 'joi';
+import { z } from 'zod';
 import { NATURES } from './accounting.constants.js';
 
-export const createGroupSchema = Joi.object({
-  name: Joi.string().trim().max(128).required(),
-  parentId: Joi.number().integer().positive(),
+export const createGroupSchema = z.object({
+  name: z.string().trim().min(1).max(128),
+  parentId: z.coerce.number().int().positive().optional(),
   // Required only for a primary group (no parent); inherited otherwise.
-  nature: Joi.string().valid(...NATURES),
+  nature: z.enum(NATURES).optional(),
 });
 
-export const updateGroupSchema = Joi.object({
-  name: Joi.string().trim().max(128),
-  parentId: Joi.number().integer().positive(),
-}).min(1);
+export const updateGroupSchema = z
+  .object({
+    name: z.string().trim().min(1).max(128).optional(),
+    parentId: z.coerce.number().int().positive().optional(),
+  })
+  .refine((o) => Object.keys(o).length >= 1, { message: 'Provide at least one field to update' });
 
-export const createLedgerSchema = Joi.object({
-  name: Joi.string().trim().max(128).required(),
-  groupId: Joi.number().integer().positive().required(),
-  alias: Joi.string().trim().max(128),
-  openingBalance: Joi.number().precision(2).default(0),
-  openingBalanceType: Joi.string().valid('Dr', 'Cr').default('Dr'),
-  clientRef: Joi.string().max(128),
-  notes: Joi.string().max(1000),
+export const createLedgerSchema = z.object({
+  name: z.string().trim().min(1).max(128),
+  groupId: z.coerce.number().int().positive(),
+  alias: z.string().trim().min(1).max(128).optional(),
+  openingBalance: z.coerce.number().default(0),
+  openingBalanceType: z.enum(['Dr', 'Cr']).default('Dr'),
+  clientRef: z.string().min(1).max(128).optional(),
+  notes: z.string().min(1).max(1000).optional(),
 });
 
-export const updateLedgerSchema = Joi.object({
-  name: Joi.string().trim().max(128),
-  groupId: Joi.number().integer().positive(),
-  alias: Joi.string().trim().max(128).allow(''),
-  openingBalance: Joi.number().precision(2),
-  openingBalanceType: Joi.string().valid('Dr', 'Cr'),
-  clientRef: Joi.string().max(128).allow(''),
-  notes: Joi.string().max(1000).allow(''),
-}).min(1);
+export const updateLedgerSchema = z
+  .object({
+    name: z.string().trim().min(1).max(128).optional(),
+    groupId: z.coerce.number().int().positive().optional(),
+    alias: z.string().trim().max(128).optional(), // allow('')
+    openingBalance: z.coerce.number().optional(),
+    openingBalanceType: z.enum(['Dr', 'Cr']).optional(),
+    clientRef: z.string().max(128).optional(), // allow('')
+    notes: z.string().max(1000).optional(), // allow('')
+  })
+  .refine((o) => Object.keys(o).length >= 1, { message: 'Provide at least one field to update' });
 
-export const listLedgersSchema = Joi.object({
-  groupId: Joi.number().integer().positive(),
-  clientRef: Joi.string().max(128),
-  limit: Joi.number().integer().min(1).max(200).default(50),
-  offset: Joi.number().integer().min(0).default(0),
+export const listLedgersSchema = z.object({
+  groupId: z.coerce.number().int().positive().optional(),
+  clientRef: z.string().min(1).max(128).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const idParamSchema = Joi.object({ id: Joi.number().integer().positive().required() });
+export const idParamSchema = z.object({ id: z.coerce.number().int().positive() });

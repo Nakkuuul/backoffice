@@ -34,7 +34,7 @@ esign/
 ├── esign.service.js       # pipeline: resolve doc → sign → deliver, fully audited
 ├── esign.repository.js    # SQL for esign_requests + esign_audit_events
 ├── esign.settings.js      # encrypted DSC PIN storage + resolution (env → DB)
-├── esign.validation.js    # Joi schemas
+├── esign.validation.js    # Zod schemas
 ├── esign.constants.js     # statuses, audit event names
 ├── signer/
 │   ├── SignerProvider.js   # interface every signing backend implements

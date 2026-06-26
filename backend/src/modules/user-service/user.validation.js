@@ -1,23 +1,25 @@
-import Joi from 'joi';
+import { z } from 'zod';
 import { ROLE_NAMES } from '../../shared/rbac.js';
 
-export const updateUserSchema = Joi.object({
-  fullName: Joi.string().max(160),
-  role: Joi.string().valid(...ROLE_NAMES),
-  phone: Joi.string().max(32),
-  isActive: Joi.boolean(),
-  clientRef: Joi.string().max(128),
-}).min(1);
+export const updateUserSchema = z
+  .object({
+    fullName: z.string().min(1).max(160).optional(),
+    role: z.enum(ROLE_NAMES).optional(),
+    phone: z.string().min(1).max(32).optional(),
+    isActive: z.boolean().optional(),
+    clientRef: z.string().min(1).max(128).optional(),
+  })
+  .refine((o) => Object.keys(o).length >= 1, { message: 'Provide at least one field to update' });
 
-export const resetPasswordSchema = Joi.object({
-  newPassword: Joi.string().min(8).max(256).required(),
+export const resetPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(256),
 });
 
-export const listSchema = Joi.object({
-  userType: Joi.string().valid('broker', 'client'),
-  role: Joi.string().valid(...ROLE_NAMES),
-  limit: Joi.number().integer().min(1).max(100).default(20),
-  offset: Joi.number().integer().min(0).default(0),
+export const listSchema = z.object({
+  userType: z.enum(['broker', 'client']).optional(),
+  role: z.enum(ROLE_NAMES).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
-export const idParamSchema = Joi.object({ id: Joi.number().integer().positive().required() });
+export const idParamSchema = z.object({ id: z.coerce.number().int().positive() });

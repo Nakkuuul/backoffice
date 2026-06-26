@@ -88,7 +88,7 @@ email-service/
 ├── email.repository.js    # outbox SQL incl. SKIP LOCKED claim, suppression, events
 ├── email.worker.js        # concurrent claim-and-send loops, retries/backoff, DLQ
 ├── email.init.js          # registers EmailSender into esign-service; starts/stops worker
-├── email.validation.js    # Joi schemas
+├── email.validation.js    # Zod schemas
 ├── email.constants.js     # statuses, events, suppression reasons
 ├── transport/
 │   ├── index.js            # getTransport() singleton
