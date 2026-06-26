@@ -10,9 +10,12 @@ import {
   ConflictError,
 } from '../../shared/errors/AppError.js';
 import { ROLES, USER_TYPE, isValidRole, effectivePermissions } from '../../shared/rbac.js';
+import { logger } from '../../shared/utils/logger.js';
 import * as users from '../user-service/user.repository.js';
 import * as sessions from './auth.repository.js';
 import * as totp from './totp.js';
+import { enqueue as enqueueEmail } from '../email-service/email.service.js';
+import { getSmsProvider } from './sms/index.js';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -191,6 +194,8 @@ export async function changePassword(userId, { currentPassword, newPassword }, c
 
   await users.setPassword(userId, await bcrypt.hash(newPassword, BCRYPT_ROUNDS), false);
   await sessions.revokeAllForUser(userId);
+  // Actively changing the password closes the loop on any pending reset links/OTPs.
+  await sessions.invalidateUserResetTokens(userId);
 
   const fresh = await users.findFullById(userId);
   if (opts.fromLoginFlow) {
@@ -198,6 +203,145 @@ export async function changePassword(userId, { currentPassword, newPassword }, c
     return need === 'none' ? fullResult(fresh, ctx) : challengeResult(fresh, need);
   }
   return fullResult(fresh, ctx); // routine change (already passed 2FA this session)
+}
+
+/* ── "Forgot access" — password reset (multi-channel) ────────────────────────── */
+
+const RESET_INVALID = 'This reset link or code is invalid or has expired';
+const sha256 = (raw) => sessions.hashToken(raw);
+
+/** Constant-time hash comparison (the OTP hash is compared in-app). */
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
+
+async function deliverResetEmail(row, template, data) {
+  try {
+    await enqueueEmail({ to: [row.email], template, templateData: data, sourceModule: 'auth-service' });
+  } catch (err) {
+    logger.error({ err: err.message }, 'password-reset: email enqueue failed');
+  }
+}
+
+/** Heavy work for a real reset (invalidate prior + create + deliver). Awaited by
+ *  callers that need determinism (tests); fire-and-forget in the request path. */
+async function issueResetCredential(row, kind, channel, ctx) {
+  const pr = config.auth.passwordReset;
+  await sessions.invalidateUserResetTokens(row.id); // only the newest credential is valid
+
+  if (kind === 'link') {
+    const raw = crypto.randomBytes(32).toString('base64url');
+    const ttl = ttlMs(pr.linkTtl);
+    await sessions.createResetToken({
+      userId: row.id, tokenHash: sha256(raw), kind, channel,
+      expiresAt: new Date(Date.now() + ttl), ip: ctx.ip,
+    });
+    const resetUrl = `${config.app.publicUrl}/reset-password?token=${encodeURIComponent(raw)}`;
+    await deliverResetEmail(row, 'password-reset-link', { name: row.full_name, resetUrl, ttlMinutes: Math.round(ttl / 60000) });
+  } else {
+    const otp = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+    const ttl = ttlMs(pr.otpTtl);
+    const ttlMin = Math.round(ttl / 60000);
+    await sessions.createResetToken({
+      userId: row.id, tokenHash: sha256(otp), kind, channel,
+      expiresAt: new Date(Date.now() + ttl), ip: ctx.ip,
+    });
+    if (channel === 'sms') {
+      await getSmsProvider().send({
+        to: row.phone,
+        message: `${otp} is your ${config.app.name} password reset code (valid ${ttlMin} min).`,
+      });
+    } else {
+      await deliverResetEmail(row, 'password-reset-otp', { name: row.full_name, code: otp, ttlMinutes: ttlMin });
+    }
+  }
+  logger.info({ userId: Number(row.id), channel, kind }, 'password-reset: credential issued');
+}
+
+/**
+ * Step 1 of "forgot access" — issue a reset credential over the chosen channel.
+ * ALWAYS returns a uniform result, and is written to be timing-uniform:
+ *  - every path runs exactly findByEmail + one count query (a dummy for unknown
+ *    accounts), so query count doesn't betray existence; and
+ *  - the heavy issue+deliver work runs fire-and-forget, so the response latency
+ *    is the same whether or not a credential was actually sent.
+ * Methods: email_link (default) | email_otp | sms_otp (needs a phone on file).
+ * Tokens are stored only as SHA-256 hashes; short-lived, single-use, attempt-limited.
+ * Pass opts.await=true to await delivery (used by tests for determinism).
+ */
+export async function requestPasswordReset({ email, method = 'email_link' }, ctx = {}, opts = {}) {
+  const pr = config.auth.passwordReset;
+  const row = await users.findByEmail(email);
+
+  if (!row || !row.is_active) {
+    await sessions.countRecentResetRequests(0, pr.requestWindowMs); // timing parity (dummy)
+    return { ok: true };
+  }
+
+  const recent = await sessions.countRecentResetRequests(row.id, pr.requestWindowMs);
+  const channel = method === 'sms_otp' ? 'sms' : 'email';
+  const kind = method === 'email_link' ? 'link' : 'otp';
+  const eligible = recent < pr.maxRequestsPerWindow && !(channel === 'sms' && !row.phone);
+
+  if (!eligible) {
+    if (recent >= pr.maxRequestsPerWindow) logger.warn({ userId: Number(row.id) }, 'password-reset: request throttled');
+    return { ok: true };
+  }
+
+  const work = issueResetCredential(row, kind, channel, ctx).catch((err) =>
+    logger.error({ err: err.message, userId: Number(row.id) }, 'password-reset: issue failed'),
+  );
+  if (opts.await) await work; // tests await; the request path lets it run async
+  else void work;
+  return { ok: true };
+}
+
+/** Lightweight check so the reset page can validate a link before showing the form. */
+export async function verifyResetToken({ token }) {
+  const row = await sessions.findValidLinkToken(sha256(token));
+  return { valid: Boolean(row) };
+}
+
+/**
+ * Step 2 — complete the reset with EITHER a link token OR (email + OTP). On
+ * success: set the new password, revoke ALL sessions, and invalidate any other
+ * outstanding reset tokens. No auto-login — the user signs in fresh (2FA still
+ * enforced at login, so e-mail control alone never grants access).
+ */
+export async function resetPassword({ token, email, otp, newPassword }) {
+  let userId;
+
+  if (token) {
+    const claimed = await sessions.claimLinkToken(sha256(token)); // atomic single-use
+    if (!claimed) throw new BadRequestError(RESET_INVALID, { code: 'RESET_INVALID' });
+    userId = claimed.user_id;
+  } else {
+    const user = await users.findByEmail(email);
+    const otpRow = user ? await sessions.findActiveOtp(user.id) : null;
+    if (!user || !otpRow) throw new BadRequestError(RESET_INVALID, { code: 'RESET_INVALID' });
+    if (!safeEqual(otpRow.token_hash, sha256(otp))) {
+      await sessions.bumpOtpAttempt(otpRow.id, config.auth.passwordReset.otpMaxAttempts);
+      throw new BadRequestError(RESET_INVALID, { code: 'RESET_INVALID' });
+    }
+    if (!(await sessions.consumeResetToken(otpRow.id))) {
+      throw new BadRequestError(RESET_INVALID, { code: 'RESET_INVALID' });
+    }
+    userId = user.id;
+  }
+
+  const full = await users.findFullById(userId);
+  if (!full || !full.is_active) throw new BadRequestError('Account is unavailable', { code: 'RESET_INVALID' });
+  if (await bcrypt.compare(newPassword, full.password_hash)) {
+    throw new BadRequestError('Choose a password different from your current one');
+  }
+
+  await users.setPassword(userId, await bcrypt.hash(newPassword, BCRYPT_ROUNDS), false);
+  await sessions.revokeAllForUser(userId);
+  await sessions.invalidateUserResetTokens(userId);
+  logger.info({ userId: Number(userId) }, 'password-reset: completed');
+  return { ok: true };
 }
 
 /* ── Two-factor authentication (TOTP) ─────────────────────────────────────────── */

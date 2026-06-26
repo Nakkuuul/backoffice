@@ -47,6 +47,49 @@ const templates = {
     };
   },
 
+  /** Password-reset link (the "forgot access" email-link channel). */
+  'password-reset-link': (data) => {
+    const name = esc(data.name || 'there');
+    const url = String(data.resetUrl || '');
+    const mins = esc(data.ttlMinutes || 30);
+    const subject = data.subject || `${config.email.fromName}: reset your password`;
+    const bodyHtml = `
+      <p>Hi ${name},</p>
+      <p>We received a request to reset your ${esc(config.email.fromName)} password.
+         Click the button below to choose a new one. This link expires in ${mins} minutes
+         and can be used once.</p>
+      <p style="margin:24px 0;">
+        <a href="${esc(url)}" style="background:#6E1F2A;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;">Reset password</a>
+      </p>
+      <p style="font-size:12px;color:#666;">Or paste this link into your browser:<br>${esc(url)}</p>
+      <p style="margin-top:20px;">If you didn't request this, you can safely ignore this email — your password won't change.</p>`;
+    const text = [
+      `Hi ${data.name || 'there'},`,
+      '',
+      `Reset your ${config.email.fromName} password (link expires in ${mins} minutes, single use):`,
+      url,
+      '',
+      `If you didn't request this, ignore this email — your password won't change.`,
+    ].join('\n');
+    return { subject, html: layout({ title: subject, bodyHtml }), text };
+  },
+
+  /** Password-reset one-time code (the OTP channel — email or as SMS text). */
+  'password-reset-otp': (data) => {
+    const name = esc(data.name || 'there');
+    const code = esc(data.code || '');
+    const mins = esc(data.ttlMinutes || 10);
+    const subject = data.subject || `${config.email.fromName}: your password reset code`;
+    const bodyHtml = `
+      <p>Hi ${name},</p>
+      <p>Use this one-time code to reset your ${esc(config.email.fromName)} password.
+         It expires in ${mins} minutes.</p>
+      <p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:20px 0;color:#0b3d91;">${code}</p>
+      <p style="margin-top:20px;">If you didn't request this, you can safely ignore this email.</p>`;
+    const text = `Your ${config.email.fromName} password reset code is ${code} (expires in ${mins} minutes). If you didn't request this, ignore this email.`;
+    return { subject, html: layout({ title: subject, bodyHtml }), text };
+  },
+
   /** Sent when an esigned document is delivered to a client. */
   'signed-document': (data) => {
     const name = esc(data.clientName || 'Customer');

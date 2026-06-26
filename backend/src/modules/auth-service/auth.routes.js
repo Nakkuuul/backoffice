@@ -6,6 +6,8 @@ import {
   loginLimiter,
   twoFactorLimiter,
   passwordChangeLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
 } from '../../api/middlewares/rateLimit.js';
 import * as controller from './auth.controller.js';
 import {
@@ -15,6 +17,9 @@ import {
   changePasswordSchema,
   twoFactorCodeSchema,
   registerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyResetSchema,
 } from './auth.validation.js';
 
 /**
@@ -29,6 +34,11 @@ const router = Router();
 
 router.post('/login', loginLimiter, validate(loginSchema), asyncHandler(controller.login));
 router.post('/refresh', validate(refreshSchema), asyncHandler(controller.refresh));
+
+// "Forgot access" — public, rate-limited, enumeration-safe.
+router.post('/forgot-password', forgotPasswordLimiter, validate(forgotPasswordSchema), asyncHandler(controller.forgotPassword));
+router.post('/reset-password/verify', resetPasswordLimiter, validate(verifyResetSchema), asyncHandler(controller.verifyReset));
+router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchema), asyncHandler(controller.resetPassword));
 router.get('/me', authenticate, asyncHandler(controller.me));
 router.post('/logout', authenticate, validate(logoutSchema), asyncHandler(controller.logout));
 router.post(

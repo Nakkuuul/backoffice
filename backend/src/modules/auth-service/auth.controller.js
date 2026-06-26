@@ -50,6 +50,29 @@ export async function twoFactorVerify(req, res) {
   res.json(await service.verifyTwoFactor(req.user.id, req.body.code, ctxOf(req)));
 }
 
+/**
+ * POST /auth/forgot-password — request a reset link/OTP via the chosen channel.
+ * Always 200 with a generic message (no account-existence disclosure).
+ */
+export async function forgotPassword(req, res) {
+  await service.requestPasswordReset(req.body, ctxOf(req));
+  res.json({
+    ok: true,
+    message: 'If an account matches, password reset instructions have been sent.',
+  });
+}
+
+/** POST /auth/reset-password/verify — is this link token still valid? → { valid } */
+export async function verifyReset(req, res) {
+  res.json(await service.verifyResetToken(req.body));
+}
+
+/** POST /auth/reset-password — complete the reset (link token, or email + OTP). */
+export async function resetPassword(req, res) {
+  await service.resetPassword(req.body);
+  res.json({ ok: true, message: 'Your password has been reset. Please sign in.' });
+}
+
 /** POST /auth/register — admin/master creates a user (forced first-login reset). */
 export async function register(req, res) {
   res.status(201).json(

@@ -73,3 +73,21 @@ export const passwordChangeLimiter = rateLimit({
   max: 10,
   identifier: (req) => String(req.user?.id || ''),
 });
+
+// "Forgot access" request — keyed by ip+email so spamming a victim's inbox or
+// enumerating accounts is bounded.
+export const forgotPasswordLimiter = rateLimit({
+  name: 'forgot',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  identifier: (req) => String(req.body?.email || '').toLowerCase(),
+});
+
+// Reset completion — bounds OTP guessing / token brute-force per ip+email.
+// (Per-token attempts are also capped in the DB.)
+export const resetPasswordLimiter = rateLimit({
+  name: 'reset',
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  identifier: (req) => String(req.body?.email || '').toLowerCase(),
+});

@@ -27,6 +27,8 @@ export const config = {
     port: Number(process.env.PORT || 3000),
     host: process.env.HOST || '0.0.0.0',
     logLevel: process.env.LOG_LEVEL || 'info',
+    // Public base URL of the frontend (used to build password-reset links, etc.).
+    publicUrl: (process.env.APP_PUBLIC_URL || 'http://localhost:3001').replace(/\/$/, ''),
   },
 
   db: {
@@ -65,6 +67,24 @@ export const config = {
       password: process.env.AUTH_MASTER_PASSWORD || 'ChangeMe@Master1',
       name: process.env.AUTH_MASTER_NAME || 'Master Administrator',
     },
+    // "Forgot access" / password reset. Link tokens are 256-bit; OTPs are
+    // 6-digit, short-lived, single-use and attempt-limited.
+    passwordReset: {
+      linkTtl: process.env.AUTH_RESET_LINK_TTL || '30m',
+      otpTtl: process.env.AUTH_RESET_OTP_TTL || '10m',
+      otpMaxAttempts: Number(process.env.AUTH_RESET_OTP_MAX_ATTEMPTS || 5),
+      // Max reset requests per user within the window (server-side throttle, in
+      // addition to the per-IP rate limiter). Excess requests are silently dropped.
+      maxRequestsPerWindow: Number(process.env.AUTH_RESET_MAX_REQUESTS || 5),
+      requestWindowMs: Number(process.env.AUTH_RESET_WINDOW_MS || 15 * 60 * 1000),
+    },
+  },
+
+  sms: {
+    // Outbound SMS provider for OTP delivery. 'stub' logs only (no on-prem SMS
+    // gateway yet); swap for a real provider (MSG91 / Twilio / Gupshup) later.
+    provider: process.env.SMS_PROVIDER || 'stub',
+    senderId: process.env.SMS_SENDER_ID || 'SAPPHB',
   },
 
   cors: {

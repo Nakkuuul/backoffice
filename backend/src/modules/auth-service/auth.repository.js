@@ -74,6 +74,96 @@ export async function deleteRecoveryCodes(userId) {
   await query(`DELETE FROM auth_recovery_codes WHERE user_id = $1`, [userId]);
 }
 
+/* ── Password-reset credentials (only SHA-256 hashes stored) ──────────────────── */
+
+export async function createResetToken({ userId, tokenHash, kind, channel, expiresAt, ip }) {
+  const { rows } = await query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, kind, channel, expires_at, requested_ip)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [userId, tokenHash, kind, channel, expiresAt, ip ?? null],
+  );
+  return rows[0];
+}
+
+/** How many reset requests this user made within the window (throttle). */
+export async function countRecentResetRequests(userId, sinceMs) {
+  const { rows } = await query(
+    `SELECT count(*)::int AS n FROM password_reset_tokens
+       WHERE user_id = $1 AND created_at > now() - ($2::int * interval '1 millisecond')`,
+    [userId, sinceMs],
+  );
+  return rows[0].n;
+}
+
+/** Invalidate every outstanding (unused) reset token for a user. */
+export async function invalidateUserResetTokens(userId) {
+  await query(
+    `UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`,
+    [userId],
+  );
+}
+
+/**
+ * Atomically claim a LINK token by its hash: marks it used and returns the row
+ * only if it was unused and unexpired. Concurrent replays get 0 rows → null.
+ */
+export async function claimLinkToken(tokenHash) {
+  const { rows } = await query(
+    `UPDATE password_reset_tokens SET used_at = now()
+       WHERE token_hash = $1 AND kind = 'link' AND used_at IS NULL AND expires_at > now()
+       RETURNING *`,
+    [tokenHash],
+  );
+  return rows[0] ?? null;
+}
+
+/** Inspect (without consuming) a link token's validity. */
+export async function findValidLinkToken(tokenHash) {
+  const { rows } = await query(
+    `SELECT id FROM password_reset_tokens
+       WHERE token_hash = $1 AND kind = 'link' AND used_at IS NULL AND expires_at > now()`,
+    [tokenHash],
+  );
+  return rows[0] ?? null;
+}
+
+/** The newest active OTP row for a user (unused + unexpired). */
+export async function findActiveOtp(userId) {
+  const { rows } = await query(
+    `SELECT * FROM password_reset_tokens
+       WHERE user_id = $1 AND kind = 'otp' AND used_at IS NULL AND expires_at > now()
+       ORDER BY created_at DESC LIMIT 1`,
+    [userId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Atomically consume a specific reset row (link or otp) by id. */
+export async function consumeResetToken(id) {
+  const { rows } = await query(
+    `UPDATE password_reset_tokens SET used_at = now()
+       WHERE id = $1 AND used_at IS NULL RETURNING id`,
+    [id],
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Record a wrong-OTP attempt; lock (consume) the row once the cap is hit. The
+ * `used_at IS NULL` guard makes concurrent bumps serialize correctly — once a
+ * bump locks the row, further bumps no-op (counter can't run past the cap).
+ */
+export async function bumpOtpAttempt(id, maxAttempts) {
+  const { rows } = await query(
+    `UPDATE password_reset_tokens
+       SET attempts = attempts + 1,
+           used_at = CASE WHEN attempts + 1 >= $2 THEN now() ELSE used_at END
+       WHERE id = $1 AND used_at IS NULL RETURNING attempts, used_at`,
+    [id, maxAttempts],
+  );
+  return rows[0] ?? null;
+}
+
 export async function countRecoveryCodes(userId) {
   const { rows } = await query(
     `SELECT count(*)::int AS n FROM auth_recovery_codes WHERE user_id = $1 AND used_at IS NULL`,

@@ -57,12 +57,48 @@ login(email,password)
 - TOTP secret is stored **AES-256-GCM encrypted** at rest; recovery codes stored
   as SHA-256, single-use. Toggle the whole feature with `AUTH_2FA_ENABLED`.
 
+## Forgot access (password reset) — multi-channel
+
+Self-service recovery for a forgotten password, with **multiple delivery options**:
+
+```
+POST /auth/forgot-password { email, method }
+  method "email_link" → 256-bit token in a one-time link (default)
+  method "email_otp"  → 6-digit one-time code by email
+  method "sms_otp"    → 6-digit one-time code by SMS (needs a phone on file)
+POST /auth/reset-password { token, newPassword }                 # link
+POST /auth/reset-password { email, otp, newPassword }            # OTP
+POST /auth/reset-password/verify { token } → { valid }           # link pre-check (UX)
+```
+
+Credentials live in `password_reset_tokens` and only their **SHA-256 hash** is
+stored. Reset **does not log the user in** and **does not bypass 2FA** — they sign
+in fresh afterwards, so e-mail/SMS control alone never grants access. SMS uses a
+pluggable provider (`auth-service/sms`, default `stub` that only logs — no on-prem
+gateway yet).
+
+**Security properties of the reset flow:**
+- **Enumeration-safe:** `forgot-password` always returns the same `200`
+  regardless of whether the account exists, is active, or has a phone.
+- **Short-lived + single-use:** link `AUTH_RESET_LINK_TTL` (30m), OTP
+  `AUTH_RESET_OTP_TTL` (10m); link claimed atomically (replay-safe), OTP consumed
+  atomically on success.
+- **OTP brute-force bounded:** wrong codes increment `attempts`; the row locks at
+  `AUTH_RESET_OTP_MAX_ATTEMPTS` (5). Plus per-(ip,email) rate limiting and a
+  per-user request throttle (`AUTH_RESET_MAX_REQUESTS`/window).
+- **Only the newest credential is valid** (prior tokens invalidated on each request).
+- On success: new password set, **all sessions revoked**, all other reset tokens
+  invalidated, and reuse of the current password is rejected.
+
 ## API (`/api/v1/auth`)
 
 | Method | Path | Auth | Purpose |
 | ------ | ---- | ---- | ------- |
 | POST | `/login` | public | email+password → full result **or** a `{ stage, token, … }` challenge |
 | POST | `/refresh` | public (refresh token) | rotate → new `{ token, refreshToken }` |
+| POST | `/forgot-password` | public (rate-limited) | issue a reset link/OTP via `email_link` \| `email_otp` \| `sms_otp` — uniform 200 |
+| POST | `/reset-password` | public (rate-limited) | complete reset with `{ token }` or `{ email, otp }` + `newPassword` |
+| POST | `/reset-password/verify` | public (rate-limited) | `{ token }` → `{ valid }` (link pre-check) |
 | POST | `/logout` | token | revoke the supplied refresh session — or **all** the user's sessions if no token is given ("sign out everywhere") |
 | GET | `/me` | token (incl. interim) | `{ user, permissions }` |
 | POST | `/change-password` | token (incl. interim) | change → next stage (login flow) or fresh tokens (routine) |
@@ -107,11 +143,15 @@ login(email,password)
 `AUTH_CHALLENGE_TTL` (interim-token TTL, e.g. 10m), `AUTH_MASTER_EMAIL/PASSWORD/NAME`.
 2FA: `AUTH_2FA_ENABLED`, `AUTH_2FA_ISSUER`, `AUTH_2FA_WINDOW`, `AUTH_2FA_RECOVERY_CODES`,
 `AUTH_ENC_KEY` (base64 32-byte AES key for TOTP secrets; falls back to `ESIGN_ENC_KEY`).
+Reset: `APP_PUBLIC_URL` (frontend base for the reset link), `AUTH_RESET_LINK_TTL`,
+`AUTH_RESET_OTP_TTL`, `AUTH_RESET_OTP_MAX_ATTEMPTS`, `AUTH_RESET_MAX_REQUESTS`,
+`AUTH_RESET_WINDOW_MS`. SMS: `SMS_PROVIDER` (default `stub`), `SMS_SENDER_ID`.
 
 ## Diagnostics
 ```bash
 npm run auth:test        # service-level: full flow incl. 2FA enroll/verify + recovery codes
 npm run auth:test-http   # HTTP: the staged login over the wire (gate codes, QR, enable/verify)
+npm run auth:test-reset  # password reset: link + OTP, single-use, attempt-lock, enumeration-safe
 ```
 
 ## TODO / roadmap
