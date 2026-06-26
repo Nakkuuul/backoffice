@@ -72,6 +72,28 @@ export async function getCompany() {
   return { profile, memberships, activeSegments, dpMode };
 }
 
+/**
+ * Public, unauthenticated branding for the login screen / tab title. Only
+ * brand-safe fields (no contacts, PAN, banking, KMP). Absent fields are null
+ * and the frontend hides them.
+ */
+export async function getPublicBranding() {
+  const row = await repo.getProfile();
+  if (!row) {
+    return { tradeName: null, legalName: null, entityType: null, sebiRegNo: null, foundedYear: null, exchanges: [] };
+  }
+  const memberships = await repo.listMemberships();
+  const exchanges = [...new Set(memberships.filter((m) => m.active).map((m) => m.exchange))];
+  return {
+    tradeName: row.trade_name,
+    legalName: row.legal_name,
+    entityType: row.entity_type,
+    sebiRegNo: row.sebi_reg_no,
+    foundedYear: row.founded_year,
+    exchanges,
+  };
+}
+
 export async function updateCompany(fields, { updatedBy } = {}) {
   const row = await repo.getProfile();
   if (!row) throw new NotFoundError('Company profile not initialised');

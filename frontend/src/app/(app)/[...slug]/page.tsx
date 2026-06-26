@@ -6,8 +6,17 @@ import { Seal } from "@/components/auth/seal";
 import { NavIcon } from "@/components/shell/icons";
 import { PermissionGate } from "@/components/shell/permission-gate";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useCompany } from "@/lib/company/company-context";
 import { useVisibleNav, findLeaf } from "@/lib/nav/use-nav";
 import type { NavSection, NavLeaf } from "@/lib/nav/manifest";
+
+const ENTITY_LABEL: Record<string, string> = {
+  proprietorship: "Proprietorship",
+  partnership: "Partnership Firm",
+  llp: "Limited Liability Partnership",
+  private_limited: "Private Limited Company",
+  public_limited: "Public Limited Company",
+};
 
 export default function AppCatchAll() {
   const pathname = usePathname();
@@ -45,17 +54,42 @@ function PageHeader({ kicker, title }: { kicker: string; title: string }) {
 
 function Overview() {
   const { user, permissions } = useAuth();
+  const { company } = useCompany();
   const visible = useVisibleNav();
   const launch = visible.filter((s) => s.key !== "overview");
   const firstName = user.fullName.split(/\s+/)[0] || user.fullName;
 
   return (
     <Shell>
-      <PageHeader kicker="Overview" title={`Welcome, ${firstName}.`} />
+      <PageHeader kicker={company ? company.tradeName : "Overview"} title={`Welcome, ${firstName}.`} />
       <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.12em] text-ink-muted">
         Signed in as {user.email} · {user.role}
         {user.twoFactorEnabled ? " · 2FA ✓" : ""}
       </p>
+
+      {company ? (
+        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[9px] border border-rule bg-paper-raised px-4 py-3">
+          <span
+            className="text-[15px] text-ink"
+            style={{ fontFamily: "var(--font-display)", fontVariationSettings: "'opsz' 30, 'wght' 520" }}
+          >
+            {company.tradeName}
+          </span>
+          {company.entityType ? (
+            <span className="rounded-[5px] border border-rule bg-paper px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-muted">
+              {ENTITY_LABEL[company.entityType] ?? company.entityType}
+            </span>
+          ) : null}
+          {company.sebiRegNo ? (
+            <span className="font-mono text-[11px] text-ink-muted">
+              <span className="text-oxblood">SEBI</span> {company.sebiRegNo}
+            </span>
+          ) : null}
+          <Link href="/masters/company-info" className="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-oxblood hover:underline">
+            Company Info →
+          </Link>
+        </div>
+      ) : null}
 
       <div className="mt-4 h-px w-full bg-rule" />
 

@@ -3,7 +3,7 @@
  * open Edit, change a profile field + a membership field, Save, and assert the
  * change persisted (view + DB). node scripts/test-company-edit-e2e.mjs
  */
-/* global document */ // referenced inside page.evaluate() (browser context)
+/* global document, window, Event, location */ // referenced inside page.evaluate() (browser context)
 import assert from "node:assert/strict";
 import { authenticator } from "otplib";
 import { pool } from "../src/db/pool.js";

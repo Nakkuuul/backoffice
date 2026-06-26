@@ -5,6 +5,11 @@ export async function getCompany(_req, res) {
   res.json(await service.getCompany());
 }
 
+/** GET /company/public → brand-safe fields, no auth (login screen / tab title). */
+export async function getPublicBranding(_req, res) {
+  res.json(await service.getPublicBranding());
+}
+
 /** PUT /company — update the singleton profile. */
 export async function updateCompany(req, res) {
   res.json(await service.updateCompany(req.body, { updatedBy: req.user.id }));

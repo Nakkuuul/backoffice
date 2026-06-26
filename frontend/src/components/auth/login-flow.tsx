@@ -33,7 +33,7 @@ const PREVIEW_CODES = [
 
 const VALID: UiStage[] = ["credentials", "change_password", "enroll_2fa", "verify_2fa", "authenticated"];
 
-export function LoginFlow() {
+export function LoginFlow({ companyName }: { companyName?: string | null }) {
   const router = useRouter();
 
   const [stage, setStage] = useState<UiStage>("credentials");
@@ -241,7 +241,7 @@ export function LoginFlow() {
             <div className="h-px w-full shadow-[0_1px_0_rgba(255,255,255,0.7)]" />
           </div>
           <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-muted">
-            v2026.06 · Sapphire Broking Pvt Ltd · Authorized access only
+            v2026.06{companyName ? ` · ${companyName}` : ""} · Authorized access only
           </p>
         </>
       ) : null}

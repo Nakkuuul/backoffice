@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AuthProvider } from "@/lib/auth/auth-context";
+import { CompanyProvider } from "@/lib/company/company-context";
 import { useVisibleNav, flattenNav } from "@/lib/nav/use-nav";
 import { Masthead } from "./masthead";
 import { BreadcrumbRibbon } from "./breadcrumb-ribbon";
@@ -13,7 +14,9 @@ const COLLAPSE_KEY = "sb.nav.collapsed";
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ShellChrome>{children}</ShellChrome>
+      <CompanyProvider>
+        <ShellChrome>{children}</ShellChrome>
+      </CompanyProvider>
     </AuthProvider>
   );
 }

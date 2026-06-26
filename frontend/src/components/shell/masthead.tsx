@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Seal } from "@/components/auth/seal";
+import { Seal, companyMonogram } from "@/components/auth/seal";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useCompany } from "@/lib/company/company-context";
 
 function initials(name: string) {
   const p = name.trim().split(/\s+/).filter(Boolean);
@@ -22,6 +23,7 @@ export function Masthead({
   onOpenPalette: () => void;
 }) {
   const { user } = useAuth();
+  const { company, loading: companyLoading } = useCompany();
 
   return (
     <header className="z-40 flex h-14 shrink-0 items-center gap-3 border-b border-rule-strong bg-paper-raised px-3 shadow-[inset_0_-1px_0_rgba(255,255,255,0.6)] sm:px-4">
@@ -52,14 +54,18 @@ export function Masthead({
 
       {/* Brand */}
       <Link href="/overview" className="flex items-center gap-2.5">
-        <Seal size={34} />
+        <Seal size={34} monogram={companyMonogram(company?.tradeName)} />
         <span className="hidden leading-none sm:block">
-          <span
-            className="block text-[15px] text-ink"
-            style={{ fontFamily: "var(--font-display)", fontVariationSettings: "'opsz' 40, 'wght' 520" }}
-          >
-            Sapphire Broking
-          </span>
+          {company || !companyLoading ? (
+            <span
+              className="block text-[15px] text-ink"
+              style={{ fontFamily: "var(--font-display)", fontVariationSettings: "'opsz' 40, 'wght' 520" }}
+            >
+              {company?.tradeName ?? "Backoffice"}
+            </span>
+          ) : (
+            <span aria-hidden="true" className="block h-[15px] w-28 animate-pulse rounded bg-rule" />
+          )}
           <span className="mt-0.5 block font-mono text-[9.5px] uppercase tracking-[0.22em] text-oxblood">
             Backoffice
           </span>

@@ -16,6 +16,10 @@ import {
  * company:manage.
  */
 const router = Router();
+
+// Public branding for the login screen — no auth, brand-safe fields only.
+router.get('/public', asyncHandler(controller.getPublicBranding));
+
 router.use(authenticate);
 
 router.get('/', requirePermission('company:read'), asyncHandler(controller.getCompany));

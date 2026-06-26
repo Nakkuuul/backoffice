@@ -21,8 +21,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Sign in · Sapphire Broking",
-  description: "Secure access to the Sapphire Broking backoffice ledger.",
+  title: "Backoffice",
+  description: "Broker backoffice ledger.",
 };
 
 export default function RootLayout({

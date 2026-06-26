@@ -7,7 +7,17 @@ interface SealProps {
   state?: "idle" | "press" | "verified";
   /** Render a slowly-orbiting antique-brass aura ring (left-panel hero only). */
   aura?: boolean;
+  /** Engraved monogram (1–2 chars). Defaults to "SB"; pass company initials on the dashboard. */
+  monogram?: string;
   className?: string;
+}
+
+/** Derive a 1–2 char monogram from a company name ("Zerodha" → "ZE", "Sapphire Broking" → "SB"). */
+export function companyMonogram(name?: string | null): string {
+  if (!name?.trim()) return "SB";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
 }
 
 /**
@@ -16,7 +26,7 @@ interface SealProps {
  * dark bottom-right), a low-opacity antique-brass rim, and a thin oxblood
  * inner hairline ring — no images, no glossy bevels.
  */
-export function Seal({ size = 96, state = "idle", aura = false, className = "" }: SealProps) {
+export function Seal({ size = 96, state = "idle", aura = false, monogram = "SB", className = "" }: SealProps) {
   const monogramSize = Math.round(size * 0.42);
   const ringSize = size + 22;
 
@@ -71,7 +81,7 @@ export function Seal({ size = 96, state = "idle", aura = false, className = "" }
       ) : null}
       {/* Monogram. */}
       <span className="absolute inset-0 flex items-center justify-center">
-        <span style={monogramStyle}>SB</span>
+        <span style={monogramStyle}>{monogram}</span>
       </span>
     </div>
   );

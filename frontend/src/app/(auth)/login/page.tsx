@@ -1,10 +1,25 @@
-import { Seal } from "@/components/auth/seal";
+import type { Metadata } from "next";
+import { Seal, companyMonogram } from "@/components/auth/seal";
 import { LoginFlow } from "@/components/auth/login-flow";
 import { Guilloche } from "@/components/auth/guilloche";
 import { MathLayer } from "@/components/auth/math-layer";
 import { LedgerBackdrop } from "@/components/auth/ledger-backdrop";
+import { getBrandingSSR } from "@/lib/server/branding";
 
-export default function LoginPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await getBrandingSSR();
+  return { title: brand?.tradeName ? `Sign in · ${brand.tradeName}` : "Sign in" };
+}
+
+export default async function LoginPage() {
+  const brand = await getBrandingSSR();
+  const name = brand?.tradeName ?? "Backoffice";
+  const standing = [
+    brand?.sebiRegNo ? `SEBI REG · ${brand.sebiRegNo}` : null,
+    brand?.exchanges?.length ? `MEMBER ${brand.exchanges.join(" / ")}` : null,
+    brand?.foundedYear ? `EST. ${brand.foundedYear}` : null,
+  ].filter(Boolean);
+
   return (
     <main className="min-h-screen bg-paper text-ink font-sans lg:grid lg:grid-cols-[1.4fr_1fr]">
       {/* LEFT — the "ledger" panel. Paper-on-paper, hairline seam, living grain. */}
@@ -66,7 +81,7 @@ export default function LoginPage() {
           className="sb-reveal relative flex items-center gap-4"
           style={{ ["--sb-delay" as string]: "60ms" }}
         >
-          <Seal size={96} aura />
+          <Seal size={96} aura monogram={companyMonogram(brand?.tradeName)} />
           <span
             className="text-[26px] text-ink"
             style={{
@@ -76,7 +91,7 @@ export default function LoginPage() {
                 "0 0 16px var(--color-paper), 0 0 16px var(--color-paper), 0 1px 0 rgba(255,255,255,0.6)",
             }}
           >
-            Sapphire Broking
+            {name}
           </span>
         </div>
 
@@ -117,7 +132,7 @@ export default function LoginPage() {
             textShadow: "0 0 12px var(--color-paper), 0 0 8px var(--color-paper)",
           }}
         >
-          <p>SEBI REG · INZ000XXXXXX · MEMBER NSE / BSE · EST. 2019</p>
+          {standing.length ? <p>{standing.join(" · ")}</p> : null}
           <p className="text-ink-muted/70">
             SVR — IST · BUILD 2026.06
             <span className="sb-caret ml-1 inline-block text-oxblood">▍</span>
@@ -127,7 +142,7 @@ export default function LoginPage() {
 
       {/* RIGHT — the "door" panel. Half-shade raised so the form lifts. */}
       <section className="flex flex-1 items-center justify-center bg-paper-raised">
-        <LoginFlow />
+        <LoginFlow companyName={brand?.legalName ?? brand?.tradeName ?? null} />
       </section>
     </main>
   );

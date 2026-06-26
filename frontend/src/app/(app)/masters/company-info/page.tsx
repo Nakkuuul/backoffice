@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Seal } from "@/components/auth/seal";
+import { Seal, companyMonogram } from "@/components/auth/seal";
 import { PermissionGate } from "@/components/shell/permission-gate";
 import { CompanyEditForm } from "@/components/company/company-edit-form";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useCompany } from "@/lib/company/company-context";
 import { ApiError } from "@/lib/api";
 import { getCompany, type Address, type CompanyResponse } from "@/lib/data-api";
 
@@ -41,6 +42,7 @@ export default function CompanyInfoPage() {
 function CompanyInfo() {
   const router = useRouter();
   const { can } = useAuth();
+  const { refresh: refreshShellCompany } = useCompany();
   const canManage = can("company:manage");
   const [data, setData] = useState<CompanyResponse | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -87,6 +89,7 @@ function CompanyInfo() {
         onSaved={() => {
           setEditing(false);
           void reload();
+          void refreshShellCompany();
         }}
       />
     );
@@ -99,7 +102,7 @@ function CompanyInfo() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Seal size={64} aura />
+          <Seal size={64} aura monogram={companyMonogram(p.tradeName)} />
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-oxblood">
               {ENTITY_LABEL[p.entityType ?? ""] ?? "Company"}
