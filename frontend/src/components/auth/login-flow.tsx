@@ -103,7 +103,7 @@ export function LoginFlow() {
   const enterAuthenticated = useCallback(() => {
     setError(null);
     setStage("authenticated"); // tokens are already in httpOnly cookies (set by the BFF)
-    if (!previewRef.current) window.setTimeout(() => router.replace("/dashboard"), 1300);
+    if (!previewRef.current) window.setTimeout(() => router.replace("/overview"), 1300);
   }, [router]);
 
   // Apply a backend response: advance to the next challenge, or finish.
@@ -264,7 +264,8 @@ function AuthenticatedView() {
         <span className="sb-caret ml-0.5 inline-block">▍</span>
       </p>
       <noscript>
-        <a href="/dashboard" className="mt-4 text-[13px] text-oxblood underline">
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/overview" className="mt-4 text-[13px] text-oxblood underline">
           Continue
         </a>
       </noscript>

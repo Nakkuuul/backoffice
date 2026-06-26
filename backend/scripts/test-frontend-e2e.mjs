@@ -75,11 +75,12 @@ try {
   const continued = await clickByText(page, "enter the backoffice");
   check("recovery → continue", continued);
 
-  // 5) Dashboard (served by /auth/me)
-  await page.waitForFunction(() => location.pathname === "/dashboard", { timeout: 20000 });
+  // 5) Overview dashboard (shell + /auth/me via the BFF cookie)
+  await page.waitForFunction(() => location.pathname === "/overview", { timeout: 20000 });
   await page.waitForFunction(() => document.body.innerText.includes("Welcome,"), { timeout: 20000 });
-  const dash = await page.evaluate(() => document.body.innerText);
-  check("dashboard renders /auth/me", dash.includes(email) && dash.includes("operations"), "welcome + email + role");
+  // innerText reflects CSS text-transform (uppercase), so compare case-insensitively.
+  const dash = (await page.evaluate(() => document.body.innerText)).toLowerCase();
+  check("overview renders /auth/me", dash.includes(email.toLowerCase()) && dash.includes("operations"), "welcome + email + role");
 
   // httpOnly hardening: tokens must NOT be readable by JS, and the access cookie
   // must carry the httpOnly flag.
