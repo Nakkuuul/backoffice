@@ -5,6 +5,8 @@ interface SealProps {
   size?: number;
   /** Drives the success / submit micro-animation (motion is reduced-motion gated). */
   state?: "idle" | "press" | "verified";
+  /** Render a slowly-orbiting antique-brass aura ring (left-panel hero only). */
+  aura?: boolean;
   className?: string;
 }
 
@@ -14,8 +16,9 @@ interface SealProps {
  * dark bottom-right), a low-opacity antique-brass rim, and a thin oxblood
  * inner hairline ring — no images, no glossy bevels.
  */
-export function Seal({ size = 96, state = "idle", className = "" }: SealProps) {
+export function Seal({ size = 96, state = "idle", aura = false, className = "" }: SealProps) {
   const monogramSize = Math.round(size * 0.42);
+  const ringSize = size + 22;
 
   const sealStyle: CSSProperties = {
     width: size,
@@ -38,12 +41,12 @@ export function Seal({ size = 96, state = "idle", className = "" }: SealProps) {
       "0 1px 0 rgba(255,255,255,0.75), 0 -1px 0 rgba(28,26,23,0.22)",
   };
 
-  return (
+  const seal = (
     <div
       aria-hidden="true"
       className={`relative shrink-0 rounded-full ${
         state === "press" ? "sb-animate-seal-press" : ""
-      } ${className}`}
+      } ${aura ? "" : className}`}
       style={sealStyle}
     >
       {/* Antique-brass rim (low opacity, never a fill). */}
@@ -70,6 +73,31 @@ export function Seal({ size = 96, state = "idle", className = "" }: SealProps) {
       <span className="absolute inset-0 flex items-center justify-center">
         <span style={monogramStyle}>SB</span>
       </span>
+    </div>
+  );
+
+  if (!aura) return seal;
+
+  // Hero variant: a thin antique-brass arc slowly orbiting the seal.
+  return (
+    <div
+      aria-hidden="true"
+      className={`relative inline-flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <span
+        className="sb-seal-ring pointer-events-none absolute rounded-full"
+        style={{
+          width: ringSize,
+          height: ringSize,
+          background:
+            "conic-gradient(from 0deg, transparent 0deg, rgba(201,168,106,0) 40deg, rgba(201,168,106,0.65) 95deg, rgba(201,168,106,0) 150deg, transparent 210deg, rgba(110,31,42,0.3) 285deg, transparent 340deg)",
+          WebkitMask:
+            "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))",
+          mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))",
+        }}
+      />
+      {seal}
     </div>
   );
 }
