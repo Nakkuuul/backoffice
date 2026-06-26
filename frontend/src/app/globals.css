@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Fixed printed-document palette (no dark mode in v1). */
+  --background: #f4f1ea; /* paper */
+  --foreground: #1c1a17; /* ink */
 }
 
 @theme inline {
+  /* Background / foreground (kept from scaffold, repointed to the warm palette). */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* "Ledger & Seal" palette. */
+  --color-paper: #f4f1ea;
+  --color-paper-raised: #faf8f2;
+  --color-field: #ffffff;
+  --color-field-border: #c9c0ac;
+  --color-ink: #1c1a17;
+  --color-ink-muted: #6b655c;
+  --color-rule: #d8d2c4;
+  --color-rule-strong: #b8af9e;
+  --color-oxblood: #6e1f2a;
+  --color-oxblood-hover: #5a1722;
+  --color-oxblood-tint: #f2e7e5;
+  --color-forest: #1f4d3a;
+  --color-forest-tint: #e6eee9;
+  --color-gold: #9a7b33;
+  --color-gold-soft: #c9a86a;
+  --color-danger: #8a2b1e;
+  --color-success: #1f4d3a;
+  --color-on-accent: #faf8f2;
+
+  /* Fonts: keep the scaffold Geist sans/mono, add Fraunces as the display serif. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgba(110, 31, 42, 0.18);
+}
+
+/* Decorative + feedback motion. All non-essential motion is opt-in via
+   prefers-reduced-motion: no-preference so reduced-motion users get none of it. */
+@keyframes sb-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes sb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sb-seal-press {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(0.99);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes sb-underline {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes sb-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Gold underline on the "Forgot access?" link — driven by the parent .group
+   hover/focus so it does not depend on a Tailwind variant composing a custom
+   class. The underline is always present as a static cue under reduced motion. */
+.sb-link-underline {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.group:hover .sb-link-underline,
+.group:focus-visible .sb-link-underline {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sb-link-underline {
+    transition: transform 200ms ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sb-animate-shake {
+    animation: sb-shake 320ms ease-in-out;
+  }
+  .sb-animate-rise {
+    animation: sb-rise 420ms ease-out both;
+  }
+  .sb-animate-seal-press {
+    animation: sb-seal-press 180ms ease-out;
+  }
+  .sb-underline {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 200ms ease-out;
+  }
+  .sb-underline-active {
+    transform: scaleX(1);
+  }
+  .sb-sweep {
+    animation: sb-sweep 1100ms ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Underline still appears (as a static cue) but does not animate. */
+  .sb-underline-active {
+    transform: scaleX(1);
+  }
 }
