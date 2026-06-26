@@ -57,7 +57,7 @@ export const NAV: NavSection[] = [
       { label: "Group / Family", href: "/masters/group-family", anyPermission: ["clients:read"] },
       { label: "Holidays", href: "/masters/holidays", anyPermission: ["clients:read"] },
       { label: "CTCL", href: "/masters/ctcl", anyPermission: ["clients:read"] },
-      { label: "Company Info", href: "/masters/company-info", anyPermission: ["clients:read"] },
+      { label: "Company Info", href: "/masters/company-info", anyPermission: ["company:read"] },
     ],
   },
   {

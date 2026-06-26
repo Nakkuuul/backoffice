@@ -58,6 +58,12 @@ try {
   await page.screenshot({ path: `${OUT}/dash-overview.png` });
   console.log("shot dash-overview");
 
+  // Company Info page (Masters → Company Info)
+  await page.goto(`${FE}/masters/company-info`, { waitUntil: "networkidle0", timeout: 60000 });
+  await wait(1100);
+  await page.screenshot({ path: `${OUT}/dash-company.png`, fullPage: true });
+  console.log("shot dash-company");
+
   // Masters section expanded (the long nested list)
   await clickText(page, "Masters");
   await wait(450);
