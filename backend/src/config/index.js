@@ -46,6 +46,18 @@ export const config = {
     accessTtl: process.env.AUTH_ACCESS_TTL || process.env.JWT_EXPIRES_IN || '1d',
     // Refresh-token lifetime (revocable session stored in auth_sessions).
     refreshTtl: process.env.AUTH_REFRESH_TTL || '30d',
+    // Interim "login challenge" token lifetime (password-change / 2FA steps).
+    challengeTtl: process.env.AUTH_CHALLENGE_TTL || '10m',
+    // AES-256 key (base64, 32 bytes) for encrypting TOTP secrets at rest.
+    // Falls back to the eSign key so dev works without extra config.
+    encKey: process.env.AUTH_ENC_KEY || process.env.ESIGN_ENC_KEY || '',
+    // Two-factor authentication (TOTP / authenticator app).
+    twoFactor: {
+      enabled: process.env.AUTH_2FA_ENABLED ? toBool(process.env.AUTH_2FA_ENABLED) : true,
+      issuer: process.env.AUTH_2FA_ISSUER || 'Sapphire Broking',
+      window: Number(process.env.AUTH_2FA_WINDOW || 1), // accepted ± time-steps (clock drift)
+      recoveryCodes: Number(process.env.AUTH_2FA_RECOVERY_CODES || 10),
+    },
     // Master user, seeded on first boot when no super_admin exists. Created with
     // must_change_password=true so its first login forces a password reset.
     master: {

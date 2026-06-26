@@ -32,16 +32,48 @@ Any admin-set password requires a change on next login:
 - Self-service `change-password` clears the flag, **revokes all prior sessions**,
   and issues a fresh access+refresh pair so the user proceeds seamlessly.
 
+## Two-factor authentication (TOTP) + multi-step login
+
+Login is a **state machine**. `POST /auth/login` verifies the password and then
+returns either a fully-authenticated result or a **challenge** with a short-lived
+**interim token** (`pre: true`) describing the next `stage`. The interim token is
+restricted by the gate to the step-up endpoints only; **no refresh session is
+created until login fully completes** — so a refreshed/established session always
+implies 2FA was passed.
+
+```
+login(email,password)
+  └─ stage "change_password"   → POST /auth/change-password   (forced first-login)
+  └─ stage "enroll_2fa"        → POST /auth/2fa/setup → /2fa/enable   (first time)
+  └─ stage "verify_2fa"        → POST /auth/2fa/verify           (returning logins)
+  └─ stage "authenticated"     → { token, refreshToken, user, permissions }
+```
+
+- **First login:** change password → scan the QR (`/2fa/setup` returns a PNG data
+  URL + otpauth URI + base32 secret) → confirm a code (`/2fa/enable`) → 2FA on,
+  **recovery codes shown once**, logged in.
+- **Returning logins:** password → `/2fa/verify` with the authenticator code (or a
+  one-time recovery code) → logged in.
+- TOTP secret is stored **AES-256-GCM encrypted** at rest; recovery codes stored
+  as SHA-256, single-use. Toggle the whole feature with `AUTH_2FA_ENABLED`.
+
 ## API (`/api/v1/auth`)
 
 | Method | Path | Auth | Purpose |
 | ------ | ---- | ---- | ------- |
-| POST | `/login` | public | email+password → `{ token, refreshToken, user, permissions, mustChangePassword }` |
-| POST | `/refresh` | public (refresh token) | rotate → new `{ token, refreshToken, mustChangePassword }` |
+| POST | `/login` | public | email+password → full result **or** a `{ stage, token, … }` challenge |
+| POST | `/refresh` | public (refresh token) | rotate → new `{ token, refreshToken }` |
 | POST | `/logout` | token | revoke the supplied refresh session — or **all** the user's sessions if no token is given ("sign out everywhere") |
-| GET | `/me` | token | `{ user, permissions }` |
-| POST | `/change-password` | token | self-service change → fresh tokens (clears mcp) |
-| POST | `/register` | token + `users:manage` | create a user (forced first-login reset) |
+| GET | `/me` | token (incl. interim) | `{ user, permissions }` |
+| POST | `/change-password` | token (incl. interim) | change → next stage (login flow) or fresh tokens (routine) |
+| POST | `/2fa/setup` | interim/token | begin enrollment → `{ qrCode, otpauthUrl, secret }` |
+| POST | `/2fa/enable` | interim/token | confirm `{ code }` → enable, returns tokens + `recoveryCodes` |
+| POST | `/2fa/verify` | interim/token | `{ code }` (TOTP or recovery) → full tokens |
+| POST | `/register` | token + `users:manage` | create a user (forced first-login reset + 2FA enroll) |
+
+> Admin **2FA reset** for a locked-out user: `POST /users/:id/reset-2fa`
+> (`users:manage`) — disables TOTP so the user re-enrolls on next login.
+> User **administration** lives in `user-service` at `/api/v1/users`.
 
 > User **administration** (list/get/update/deactivate/reset-password, role
 > catalog) lives in `user-service` at `/api/v1/users`.
@@ -63,19 +95,29 @@ Any admin-set password requires a change on next login:
 - All SQL is parameterized; Joi validates + strips unknown fields (no mass-assignment
   of `role`/`is_active`/`must_change_password`/`created_by`).
 - Client users always keep a `clientRef` (enforced on register **and** update).
+- The interim-token gate is **stage-exact** (router-relative path match) — a
+  later stage can't reach an earlier stage's endpoint (e.g. verify→setup).
+- **Rate limiting** on login / 2FA verify+enable+setup / change-password
+  (per ip+identity) → `429 TOO_MANY_REQUESTS`. TOTP secret decryption fails
+  closed (never 500s on tampered ciphertext); boot fails fast if 2FA is on
+  without an encryption key.
 
 ## Config / env
 `JWT_SECRET`, `AUTH_ACCESS_TTL` (e.g. 15m), `AUTH_REFRESH_TTL` (e.g. 30d),
-`AUTH_MASTER_EMAIL/PASSWORD/NAME`.
+`AUTH_CHALLENGE_TTL` (interim-token TTL, e.g. 10m), `AUTH_MASTER_EMAIL/PASSWORD/NAME`.
+2FA: `AUTH_2FA_ENABLED`, `AUTH_2FA_ISSUER`, `AUTH_2FA_WINDOW`, `AUTH_2FA_RECOVERY_CODES`,
+`AUTH_ENC_KEY` (base64 32-byte AES key for TOTP secrets; falls back to `ESIGN_ENC_KEY`).
 
 ## Diagnostics
 ```bash
-npm run auth:test        # service-level: login/refresh-rotation/forced-change/revocation
-npm run auth:test-http   # HTTP: the 403 PASSWORD_CHANGE_REQUIRED gate end-to-end (server up)
+npm run auth:test        # service-level: full flow incl. 2FA enroll/verify + recovery codes
+npm run auth:test-http   # HTTP: the staged login over the wire (gate codes, QR, enable/verify)
 ```
 
 ## TODO / roadmap
+- [x] Rate limiting on login + 2FA + change-password (in-memory).
+- [ ] Back rate-limiting with Redis for a multi-node fleet (currently per-process).
+- [ ] Audit log of auth events (login, 2FA enable/verify, resets).
 - [ ] httpOnly refresh-token cookie option (vs JSON body) for browser clients.
-- [ ] Login rate-limiting / lockout + audit log of auth events.
 - [ ] Password strength policy + breached-password check.
-- [ ] Optional 2FA for broker staff; SSO later.
+- [ ] SSO / WebAuthn (passkeys) as alternative second factors.

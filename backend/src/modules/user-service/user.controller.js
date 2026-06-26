@@ -28,3 +28,9 @@ export async function resetPassword(req, res) {
   await service.resetPassword(req.params.id, req.body.newPassword, req.user);
   res.status(204).end();
 }
+
+/** POST /users/:id/reset-2fa — admin disables a user's 2FA (forces re-enrollment). */
+export async function resetTwoFactor(req, res) {
+  await service.resetTwoFactor(req.params.id, req.user);
+  res.status(204).end();
+}

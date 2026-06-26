@@ -1,7 +1,31 @@
 import { query } from '../../db/pool.js';
 
 const PUBLIC_COLS = `id, email, full_name, role, user_type, client_ref, phone,
-  is_active, must_change_password, last_login_at, created_at`;
+  is_active, must_change_password, totp_enabled, last_login_at, created_at`;
+
+/** Store a (pending) TOTP secret; enablement is a separate confirmed step. */
+export async function setTotpSecret(id, secretEnc) {
+  await query(`UPDATE users SET totp_secret_enc = $2, updated_at = now() WHERE id = $1`, [
+    id,
+    secretEnc,
+  ]);
+}
+
+/** Mark TOTP enabled after the user confirms a code. */
+export async function enableTotp(id) {
+  await query(
+    `UPDATE users SET totp_enabled = true, totp_enrolled_at = now(), updated_at = now() WHERE id = $1`,
+    [id],
+  );
+}
+
+/** Disable + forget TOTP (admin reset → user must re-enroll). */
+export async function clearTotp(id) {
+  await query(
+    `UPDATE users SET totp_secret_enc = NULL, totp_enabled = false, totp_enrolled_at = NULL, updated_at = now() WHERE id = $1`,
+    [id],
+  );
+}
 
 export async function findByEmail(email) {
   const { rows } = await query(`SELECT * FROM users WHERE lower(email) = lower($1)`, [email]);

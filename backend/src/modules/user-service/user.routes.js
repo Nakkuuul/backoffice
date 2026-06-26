@@ -25,3 +25,9 @@ userRoutes.post(
   validate(resetPasswordSchema),
   asyncHandler(controller.resetPassword),
 );
+userRoutes.post(
+  '/:id/reset-2fa',
+  requirePermission('users:manage'),
+  validate(idParamSchema, 'params'),
+  asyncHandler(controller.resetTwoFactor),
+);

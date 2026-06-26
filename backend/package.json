@@ -56,12 +56,14 @@
     "jsonwebtoken": "^9.0.2",
     "mailparser": "^3.9.11",
     "nodemailer": "^9.0.1",
+    "otplib": "^12.0.1",
     "pdf-lib": "^1.17.1",
     "pg": "^8.12.0",
     "pino": "^9.3.2",
     "pino-http": "^10.2.0",
     "pkijs": "^3.4.0",
     "puppeteer": "^25.2.1",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

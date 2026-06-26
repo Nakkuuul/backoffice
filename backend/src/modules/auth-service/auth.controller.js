@@ -23,9 +23,31 @@ export async function me(req, res) {
   res.json(await service.me(req.user.id));
 }
 
-/** POST /auth/change-password → fresh { token, refreshToken, user, permissions }. */
+/**
+ * POST /auth/change-password. In the login flow (interim token) → advances to
+ * the next step (2FA). Routine change (full token) → fresh full tokens.
+ */
 export async function changePassword(req, res) {
-  res.json(await service.changePassword(req.user.id, req.body, ctxOf(req)));
+  res.json(
+    await service.changePassword(req.user.id, req.body, ctxOf(req), {
+      fromLoginFlow: Boolean(req.user.pre),
+    }),
+  );
+}
+
+/** POST /auth/2fa/setup → { qrCode, otpauthUrl, secret } (begin enrollment). */
+export async function twoFactorSetup(req, res) {
+  res.json(await service.setupTwoFactor(req.user.id));
+}
+
+/** POST /auth/2fa/enable → confirm code, enable 2FA, return tokens + recoveryCodes. */
+export async function twoFactorEnable(req, res) {
+  res.json(await service.enableTwoFactor(req.user.id, req.body.code, ctxOf(req)));
+}
+
+/** POST /auth/2fa/verify → verify code (returning login) → full tokens. */
+export async function twoFactorVerify(req, res) {
+  res.json(await service.verifyTwoFactor(req.user.id, req.body.code, ctxOf(req)));
 }
 
 /** POST /auth/register — admin/master creates a user (forced first-login reset). */

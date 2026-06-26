@@ -19,6 +19,11 @@ export const changePasswordSchema = Joi.object({
   newPassword: Joi.string().min(8).max(256).required(),
 });
 
+// 6-digit TOTP code or a recovery code (e.g. "A1B2C-D3E4F").
+export const twoFactorCodeSchema = Joi.object({
+  code: Joi.string().min(6).max(20).required(),
+});
+
 export const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(256).required(),

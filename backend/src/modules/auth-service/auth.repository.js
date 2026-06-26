@@ -45,3 +45,39 @@ export async function revokeAllForUser(userId) {
     [userId],
   );
 }
+
+/* ── 2FA recovery codes (only SHA-256 hashes stored) ──────────────────────── */
+
+/** Replace a user's recovery codes with a fresh batch (hashes). */
+export async function replaceRecoveryCodes(userId, codeHashes) {
+  await query(`DELETE FROM auth_recovery_codes WHERE user_id = $1`, [userId]);
+  for (const hash of codeHashes) {
+    await query(`INSERT INTO auth_recovery_codes (user_id, code_hash) VALUES ($1,$2)`, [
+      userId,
+      hash,
+    ]);
+  }
+}
+
+/** Atomically consume one unused recovery code; returns true if it was valid. */
+export async function consumeRecoveryCode(userId, codeHash) {
+  const { rows } = await query(
+    `UPDATE auth_recovery_codes SET used_at = now()
+       WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL
+       RETURNING id`,
+    [userId, codeHash],
+  );
+  return rows.length > 0;
+}
+
+export async function deleteRecoveryCodes(userId) {
+  await query(`DELETE FROM auth_recovery_codes WHERE user_id = $1`, [userId]);
+}
+
+export async function countRecoveryCodes(userId) {
+  const { rows } = await query(
+    `SELECT count(*)::int AS n FROM auth_recovery_codes WHERE user_id = $1 AND used_at IS NULL`,
+    [userId],
+  );
+  return rows[0].n;
+}

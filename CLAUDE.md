@@ -176,7 +176,16 @@ idempotent) with `must_change_password=true`. **Forced first-login change**: the
 `mcp` claim makes `authenticate` block every route with `403
 PASSWORD_CHANGE_REQUIRED` except change-password/me/logout until the user resets.
 `change-password` clears the flag, revokes all sessions, issues fresh tokens.
-Tests: `auth:test`, `auth:test-http`. CLI: `npm run user:create`.
+**2FA (TOTP)**: login is a **state machine** — `/auth/login` returns a `stage`
+(`change_password` → `enroll_2fa` → `verify_2fa` → `authenticated`) + a
+short-lived **interim token** (`pre:true`); the refresh session is created only
+once fully complete. First login: change password → `/auth/2fa/setup` (QR +
+otpauth + base32) → `/auth/2fa/enable` (returns one-time **recovery codes**);
+returning logins → `/auth/2fa/verify` (TOTP or recovery code). TOTP secret stored
+**AES-256-GCM** (`AUTH_ENC_KEY`, falls back to `ESIGN_ENC_KEY`); recovery codes
+SHA-256 + single-use. Gate adds `403 TWO_FACTOR_REQUIRED`. Toggle `AUTH_2FA_ENABLED`.
+Admin reset for lockouts: `POST /users/:id/reset-2fa`. Tests: `auth:test`,
+`auth:test-http`. CLI: `npm run user:create`.
 
 ### user-service — `/users` (live)
 **Administers** existing users (list/get/update/deactivate, `reset-password` →
@@ -268,8 +277,8 @@ Migrations (`backend/src/db/migrations`, applied by `npm run migrate`):
 `001_init` (users), `002_esign`, `003_esign_settings`, `004_email_service`,
 `005_email_inbound`, `006_reports`, `007_documents`, `008_user_rbac`,
 `009_accounting_masters`, `010_ekyc`, `011_auth` (must_change_password +
-auth_sessions). Simple forward-only runner tracking `schema_migrations`. **No
-down migrations.**
+auth_sessions), `012_twofactor` (TOTP columns + auth_recovery_codes). Simple
+forward-only runner tracking `schema_migrations`. **No down migrations.**
 
 Gotcha seen: `users.id` sequence drifted because an early test inserted an
 explicit `id=1`; resync with

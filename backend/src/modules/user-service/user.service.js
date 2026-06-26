@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/errors/AppError.js';
 import * as repo from './user.repository.js';
+import { deleteRecoveryCodes } from '../auth-service/auth.repository.js';
 import { isValidRole, roleCatalog } from '../../shared/rbac.js';
 
 // Administration of existing users. Authentication + registration live in
@@ -75,6 +76,15 @@ export async function resetPassword(id, newPassword, actor) {
   if (!row) throw new NotFoundError('User not found');
   assertCanManage(actor, row);
   await repo.setPassword(id, await bcrypt.hash(newPassword, BCRYPT_ROUNDS), true);
+}
+
+/** Admin 2FA reset — disable + forget TOTP so a locked-out user re-enrolls. */
+export async function resetTwoFactor(id, actor) {
+  const row = await repo.findById(id);
+  if (!row) throw new NotFoundError('User not found');
+  assertCanManage(actor, row);
+  await repo.clearTotp(id);
+  await deleteRecoveryCodes(id);
 }
 
 export async function getUser(id) {

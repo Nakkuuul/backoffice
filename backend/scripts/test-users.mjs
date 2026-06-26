@@ -17,26 +17,29 @@ const emails = {
 
 try {
   await createUser({ email: emails.sup, password: pw, role: 'super_admin', fullName: 'Super' });
-  await createUser({ email: emails.ops, password: pw, role: 'operations', fullName: 'Ops' });
+  const ops = await createUser({ email: emails.ops, password: pw, role: 'operations', fullName: 'Ops' });
   await createUser({ email: emails.cli, password: pw, role: 'client', clientRef: 'CL0001', fullName: 'Client' });
 
-  // Login flow
-  const sup = await login({ email: emails.sup, password: pw });
-  const ops = await login({ email: emails.ops, password: pw });
-  const cli = await login({ email: emails.cli, password: pw });
-  console.log('super_admin perms:', sup.permissions.length, '(all =', ALL_PERMISSIONS.length, ')');
-  console.log('operations perms :', ops.permissions.length);
-  console.log('client perms     :', cli.permissions);
+  // Permissions resolve from role (independent of the multi-step login).
+  const supPerms = effectivePermissions('super_admin');
+  console.log('super_admin perms:', supPerms.length, '(all =', ALL_PERMISSIONS.length, ')');
+  console.log('operations perms :', effectivePermissions('operations').length);
+  console.log('client perms     :', effectivePermissions('client'));
 
-  // Wrong password rejected
+  // Newly-created users are forced through password change first → login returns
+  // a challenge, not full tokens.
+  const opsLogin = await login({ email: emails.ops, password: pw });
+  assert.equal(opsLogin.stage, 'change_password', 'first login → change_password challenge');
+
+  // Wrong password rejected (before any staging).
   let badRejected = false;
   try { await login({ email: emails.ops, password: 'nope' }); } catch { badRejected = true; }
 
   // me()
-  const meOps = await me(ops.user.id);
+  const meOps = await me(ops.id);
 
   // ── Assertions ──────────────────────────────────────────────────────────
-  assert.equal(sup.permissions.length, ALL_PERMISSIONS.length, 'super_admin = all permissions');
+  assert.equal(supPerms.length, ALL_PERMISSIONS.length, 'super_admin = all permissions');
   assert.ok(hasPermission('super_admin', 'anything:whatever'), 'super_admin wildcard');
   assert.ok(hasPermission('operations', 'reports:generate'), 'ops can generate reports');
   assert.ok(!hasPermission('operations', 'users:manage'), 'ops cannot manage users');
