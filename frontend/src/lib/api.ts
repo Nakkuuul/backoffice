@@ -121,3 +121,20 @@ export const verifyTwoFactor = (code: string) =>
 export const getMe = () => call<MeResponse>("/me");
 
 export const logout = () => call<null>("/logout", { method: "POST" });
+
+/* ── Forgot access (password reset) — public, pre-auth ──────────────────────── */
+
+export type ResetMethod = "email_link" | "email_otp" | "sms_otp";
+
+export const forgotPassword = (email: string, method: ResetMethod) =>
+  call<{ ok: boolean; message?: string }>("/forgot-password", { method: "POST", body: { email, method } });
+
+export const verifyResetToken = (token: string) =>
+  call<{ valid: boolean }>("/reset-password/verify", { method: "POST", body: { token } });
+
+export const resetPassword = (body: {
+  token?: string;
+  email?: string;
+  otp?: string;
+  newPassword: string;
+}) => call<{ ok: boolean; message?: string }>("/reset-password", { method: "POST", body });

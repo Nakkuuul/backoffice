@@ -5,12 +5,13 @@ import Link from "next/link";
 import { Seal } from "./seal";
 import { Field } from "./field";
 import { SubmitButton } from "./submit-button";
-import { StepHeader } from "./step-chrome";
+import { StepHeader, ErrorBanner } from "./step-chrome";
+import { ApiError, forgotPassword } from "@/lib/api";
 
 /**
- * "Forgot access" — request a reset via one of the backend's channels. UI ONLY:
- * the submit is not wired to the API yet; it simulates the round-trip and shows
- * the (enumeration-safe) confirmation the backend will return.
+ * "Forgot access" — request a reset via one of the backend's channels
+ * (POST /auth/forgot-password). The backend response is enumeration-safe, so we
+ * show the same confirmation regardless of whether the account exists.
  */
 const METHODS = [
   { id: "email_link", label: "Email link", hint: "We’ll email you a secure, single-use reset link." },
@@ -26,20 +27,29 @@ export function ForgotFlow({ monogram = "SB" }: { monogram?: string }) {
   const [method, setMethod] = useState<Method>("email_link");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   const active = METHODS.find((m) => m.id === method)!;
   const isOtp = method !== "email_link";
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loading || !email.trim()) return;
+    setError(null);
     setLoading(true);
-    // UI only — not wired to /auth/forgot-password yet. Simulate the request.
-    window.setTimeout(() => {
-      setLoading(false);
+    try {
+      await forgotPassword(email.trim(), method);
       setSent(true);
-    }, 800);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Couldn’t send reset instructions. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -47,6 +57,8 @@ export function ForgotFlow({ monogram = "SB" }: { monogram?: string }) {
       <div className="mb-8 flex justify-center lg:hidden">
         <Seal size={56} monogram={monogram} />
       </div>
+
+      {!sent ? <ErrorBanner error={error} /> : null}
 
       {sent ? (
         <div className="sb-animate-step">
