@@ -1,80 +1,13 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Seal } from "@/components/auth/seal";
 import { PermissionGate } from "@/components/shell/permission-gate";
-
-/* ──────────────────────────────────────────────────────────────────────────
- * MOCK — shaped exactly like GET /api/v1/company ({ profile, memberships,
- * activeSegments }). When integrating, replace COMPANY with a fetch through the
- * authenticated BFF; the rendering below stays unchanged.
- * ────────────────────────────────────────────────────────────────────────── */
-const COMPANY = {
-  profile: {
-    tradeName: "Sapphire Broking",
-    legalName: "Sapphire Broking Private Limited",
-    entityType: "private_limited",
-    dateOfIncorporation: "2019-06-12",
-    foundedYear: 2019,
-    cin: "U67120MH2019PTC123456",
-    pan: "AABCS1234K",
-    gstin: "27AABCS1234K1Z5",
-    tan: "NGPS12345K",
-    sebiRegNo: "INZ000312345",
-    logoRef: null,
-    registeredAddress: {
-      line1: "4th Floor, Sapphire House",
-      line2: "Wardha Road, Dhantoli",
-      city: "Nagpur",
-      state: "Maharashtra",
-      pincode: "440012",
-      country: "India",
-    },
-    headOfficeAddress: {
-      line1: "Unit 1102, Trade Tower",
-      line2: "Bandra Kurla Complex",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400051",
-      country: "India",
-    },
-    phone: "+91 712 2999999",
-    altPhone: "+91 712 2888888",
-    email: "info@sapphirebroking.net",
-    website: "https://sapphirebroking.net",
-    supportEmail: "support@sapphirebroking.net",
-    grievanceEmail: "grievance@sapphirebroking.net",
-    complianceOfficer: { name: "Ananya Deshpande", email: "compliance@sapphirebroking.net", phone: "+91 98220 11111" },
-    principalOfficer: { name: "Rohan Mehta", email: "principal@sapphirebroking.net", phone: "+91 98220 22222" },
-    keyPersonnel: [
-      { name: "Nakul Pratap Thakur", role: "Managing Director", din: "08123456", pan: "ABCPT1234M", email: "nakul@sapphirebroking.net", phone: "+91 98220 33333" },
-      { name: "Priya Sharma", role: "Director", din: "08234567", pan: "ABCPS2345N", email: "priya@sapphirebroking.net", phone: "+91 98220 44444" },
-    ],
-    depositories: [
-      { depository: "NSDL", mode: "self", dpId: "IN303456", dpName: "Sapphire Broking Private Limited", sebiRegNo: "IN-DP-NSDL-2019-001", active: true, thirdParty: null },
-      {
-        depository: "CDSL",
-        mode: "third_party",
-        dpId: "12088700",
-        dpName: null,
-        sebiRegNo: null,
-        active: true,
-        thirdParty: { name: "Globe Capital DP Services Ltd", dpId: "12088700", sebiRegNo: "IN-DP-CDSL-2014-072", contactPerson: "Operations Desk", email: "dp@globecapital.example", phone: "+91 22 4000 0000", agreementRef: "DP/2019/0042" },
-      },
-    ],
-    bankAccounts: [
-      { label: "Client Settlement", bankName: "HDFC Bank", accountNo: "50200012345678", ifsc: "HDFC0000123", branch: "Dhantoli, Nagpur", type: "settlement" },
-      { label: "Own / House", bankName: "ICICI Bank", accountNo: "002405001234", ifsc: "ICIC0000024", branch: "BKC, Mumbai", type: "own" },
-    ],
-    baseCurrency: "INR",
-    financialYearStart: "04-01",
-    timezone: "Asia/Kolkata",
-    updatedAt: "2026-06-26T11:30:00.000Z",
-  },
-  memberships: [
-    { id: 1, exchange: "NSE", membershipType: "TM-CM", tradingMemberId: "90123", clearingMode: "self", clearingMemberId: "M51234", cmCode: "12345", thirdPartyClearer: null, registrationNo: "INB231234567", segments: ["CASH", "FNO", "CURRENCY"], active: true, effectiveFrom: "2019-08-01" },
-    { id: 2, exchange: "BSE", membershipType: "TM-CM", tradingMemberId: "6789", clearingMode: "self", clearingMemberId: "C6789", cmCode: "6789", thirdPartyClearer: null, registrationNo: "INB011234567", segments: ["CASH", "FNO"], active: true, effectiveFrom: "2019-09-15" },
-    { id: 3, exchange: "MCX", membershipType: "TM", tradingMemberId: "55510", clearingMode: "third_party", clearingMemberId: null, cmCode: null, thirdPartyClearer: { name: "Phillip Commodities India", cmCode: "MCX-CM-118", sebiRegNo: "INZ000045678", contactPerson: "Clearing Desk", email: "clearing@phillip.example", phone: "+91 22 6000 0000", agreementRef: "CM/2021/0117" }, registrationNo: "INZ000312345", segments: ["COMMODITY"], active: true, effectiveFrom: "2021-01-10" },
-  ],
-  activeSegments: ["CASH", "FNO", "CURRENCY"],
-};
+import { CompanyEditForm } from "@/components/company/company-edit-form";
+import { useAuth } from "@/lib/auth/auth-context";
+import { ApiError } from "@/lib/api";
+import { getCompany, type Address, type CompanyResponse } from "@/lib/data-api";
 
 const ENTITY_LABEL: Record<string, string> = {
   proprietorship: "Proprietorship",
@@ -92,12 +25,10 @@ const SEGMENT_LABEL: Record<string, string> = {
   SLB: "SLB",
 };
 
-function fmtDate(iso: string | null) {
+function fmtDate(iso?: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
-
-type Addr = Partial<Record<"line1" | "line2" | "city" | "state" | "pincode" | "country", string>>;
 
 export default function CompanyInfoPage() {
   return (
@@ -108,7 +39,60 @@ export default function CompanyInfoPage() {
 }
 
 function CompanyInfo() {
-  const { profile: p, memberships, activeSegments } = COMPANY;
+  const router = useRouter();
+  const { can } = useAuth();
+  const canManage = can("company:manage");
+  const [data, setData] = useState<CompanyResponse | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCompany().then(
+      (d) => {
+        if (!cancelled) {
+          setData(d);
+          setStatus("ready");
+        }
+      },
+      (e) => {
+        if (cancelled) return;
+        if (e instanceof ApiError && e.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        setError(e instanceof ApiError ? e.message : "Failed to load company information.");
+        setStatus("error");
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  const reload = useCallback(async () => {
+    const d = await getCompany().catch(() => null);
+    if (d) setData(d);
+  }, []);
+
+  if (status === "loading") return <StateNote>Loading company profile…</StateNote>;
+  if (status === "error" || !data) return <StateNote tone="danger">{error || "Failed to load."}</StateNote>;
+
+  if (editing) {
+    return (
+      <CompanyEditForm
+        data={data}
+        onCancel={() => setEditing(false)}
+        onSaved={() => {
+          setEditing(false);
+          void reload();
+        }}
+      />
+    );
+  }
+
+  const { profile: p, memberships, activeSegments } = data;
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-8 sm:px-8">
@@ -118,7 +102,7 @@ function CompanyInfo() {
           <Seal size={64} aura />
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-oxblood">
-              {ENTITY_LABEL[p.entityType] ?? "Company"}
+              {ENTITY_LABEL[p.entityType ?? ""] ?? "Company"}
             </p>
             <h1
               className="mt-1 text-[30px] leading-tight text-ink"
@@ -130,17 +114,18 @@ function CompanyInfo() {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button
-            type="button"
-            disabled
-            title="Editing arrives with API integration"
-            className="cursor-not-allowed rounded-[6px] border border-rule-strong bg-paper-raised px-3.5 py-1.5 text-[13px] font-medium text-ink-muted opacity-70"
-          >
-            Edit profile
-          </button>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-[6px] border border-rule-strong bg-paper-raised px-3.5 py-1.5 text-[13px] font-medium text-ink transition-colors hover:border-oxblood hover:text-oxblood"
+            >
+              Edit profile
+            </button>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-1.5">
-            <KeyChip k="SEBI" v={p.sebiRegNo} />
-            <KeyChip k="CIN" v={p.cin} />
+            {p.sebiRegNo ? <KeyChip k="SEBI" v={p.sebiRegNo} /> : null}
+            {p.cin ? <KeyChip k="CIN" v={p.cin} /> : null}
           </div>
         </div>
       </div>
@@ -162,7 +147,7 @@ function CompanyInfo() {
         )}
       </div>
 
-      {/* Memberships — the structured child data, given prominence. */}
+      {/* Memberships */}
       <Panel title="Exchange Memberships" className="mt-6">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[13px]">
@@ -212,20 +197,24 @@ function CompanyInfo() {
                   </Td>
                 </tr>
               ))}
+              {memberships.length === 0 ? (
+                <tr>
+                  <Td className="text-ink-muted">No memberships recorded.</Td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
       </Panel>
 
-      {/* Detail panels */}
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Panel title="Identity & Statutory">
           <DefGrid
             rows={[
               ["Legal name", p.legalName],
-              ["Entity type", ENTITY_LABEL[p.entityType] ?? p.entityType],
+              ["Entity type", ENTITY_LABEL[p.entityType ?? ""] ?? p.entityType],
               ["Date of incorporation", fmtDate(p.dateOfIncorporation)],
-              ["Founded", String(p.foundedYear)],
+              ["Founded", p.foundedYear ? String(p.foundedYear) : null],
               ["CIN", p.cin],
               ["PAN", p.pan],
               ["GSTIN", p.gstin],
@@ -259,8 +248,8 @@ function CompanyInfo() {
         <Panel title="Compliance & Key Personnel">
           <DefGrid
             rows={[
-              ["Compliance officer", `${p.complianceOfficer.name} · ${p.complianceOfficer.email}`],
-              ["Principal officer", `${p.principalOfficer.name} · ${p.principalOfficer.email}`],
+              ["Compliance officer", joinPerson(p.complianceOfficer)],
+              ["Principal officer", joinPerson(p.principalOfficer)],
             ]}
           />
           <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">Directors / KMP</p>
@@ -274,14 +263,20 @@ function CompanyInfo() {
               </tr>
             </thead>
             <tbody>
-              {p.keyPersonnel.map((k) => (
-                <tr key={k.din} className="border-b border-rule last:border-0">
-                  <Td className="text-ink">{k.name}</Td>
-                  <Td>{k.role}</Td>
-                  <Td className="font-mono tabular-nums">{k.din}</Td>
-                  <Td className="font-mono tabular-nums">{k.pan}</Td>
+              {p.keyPersonnel.length ? (
+                p.keyPersonnel.map((k, i) => (
+                  <tr key={k.din ?? i} className="border-b border-rule last:border-0">
+                    <Td className="text-ink">{k.name}</Td>
+                    <Td>{k.role ?? "—"}</Td>
+                    <Td className="font-mono tabular-nums">{k.din ?? "—"}</Td>
+                    <Td className="font-mono tabular-nums">{k.pan ?? "—"}</Td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <Td className="text-ink-muted">None recorded.</Td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </Panel>
@@ -299,36 +294,42 @@ function CompanyInfo() {
               </tr>
             </thead>
             <tbody>
-              {p.depositories.map((d) => (
-                <tr key={d.depository} className="border-b border-rule last:border-0">
-                  <Td className="font-medium text-ink">{d.depository}</Td>
-                  <Td>
-                    <ModeChip self={d.mode === "self"} selfLabel="Self DP" otherLabel="Third-party" />
-                  </Td>
-                  <Td className="font-mono tabular-nums">{d.dpId ?? "—"}</Td>
-                  <Td>
-                    {d.mode === "self" ? (
-                      <span className="text-ink">{d.dpName ?? "Self"}</span>
-                    ) : (
-                      <span className="flex flex-col">
-                        <span className="text-ink">via {d.thirdParty?.name ?? "—"}</span>
-                        <span className="font-mono text-[10px] text-ink-muted/70">
-                          {[d.thirdParty?.sebiRegNo, d.thirdParty?.email, d.thirdParty?.agreementRef]
-                            .filter(Boolean)
-                            .join(" · ")}
+              {p.depositories.length ? (
+                p.depositories.map((d) => (
+                  <tr key={d.depository} className="border-b border-rule last:border-0">
+                    <Td className="font-medium text-ink">{d.depository}</Td>
+                    <Td>
+                      <ModeChip self={d.mode === "self"} selfLabel="Self DP" otherLabel="Third-party" />
+                    </Td>
+                    <Td className="font-mono tabular-nums">{d.dpId ?? "—"}</Td>
+                    <Td>
+                      {d.mode === "self" ? (
+                        <span className="text-ink">{d.dpName ?? "Self"}</span>
+                      ) : (
+                        <span className="flex flex-col">
+                          <span className="text-ink">via {d.thirdParty?.name ?? "—"}</span>
+                          <span className="font-mono text-[10px] text-ink-muted/70">
+                            {[d.thirdParty?.sebiRegNo, d.thirdParty?.email, d.thirdParty?.agreementRef]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </span>
-                      </span>
-                    )}
-                  </Td>
-                  <Td>
-                    {d.active ? (
-                      <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-forest">Active</span>
-                    ) : (
-                      <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted/70">Inactive</span>
-                    )}
-                  </Td>
+                      )}
+                    </Td>
+                    <Td>
+                      {d.active ? (
+                        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-forest">Active</span>
+                      ) : (
+                        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted/70">Inactive</span>
+                      )}
+                    </Td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <Td className="text-ink-muted">None recorded.</Td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
           <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">Bank accounts</p>
@@ -342,14 +343,20 @@ function CompanyInfo() {
               </tr>
             </thead>
             <tbody>
-              {p.bankAccounts.map((b) => (
-                <tr key={b.accountNo} className="border-b border-rule last:border-0">
-                  <Td className="text-ink">{b.label}</Td>
-                  <Td>{b.bankName}</Td>
-                  <Td className="font-mono tabular-nums">{b.accountNo}</Td>
-                  <Td className="font-mono">{b.ifsc}</Td>
+              {p.bankAccounts.length ? (
+                p.bankAccounts.map((b) => (
+                  <tr key={b.accountNo} className="border-b border-rule last:border-0">
+                    <Td className="text-ink">{b.label ?? "—"}</Td>
+                    <Td>{b.bankName}</Td>
+                    <Td className="font-mono tabular-nums">{b.accountNo}</Td>
+                    <Td className="font-mono">{b.ifsc ?? "—"}</Td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <Td className="text-ink-muted">None recorded.</Td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </Panel>
@@ -366,14 +373,30 @@ function CompanyInfo() {
         </Panel>
       </div>
 
-      <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted/70">
-        Showing sample data · not yet connected to the backend
+      <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.14em] text-forest/70">
+        Live · fetched from /api/v1/company
       </p>
     </div>
   );
 }
 
 /* ── Presentational helpers ─────────────────────────────────────────────────── */
+
+function joinPerson(per: { name?: string; email?: string } | undefined) {
+  if (!per || (!per.name && !per.email)) return null;
+  return [per.name, per.email].filter(Boolean).join(" · ");
+}
+
+function StateNote({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "danger" }) {
+  return (
+    <div className="mx-auto max-w-[1180px] px-6 py-12 sm:px-8">
+      <p className={`font-mono text-[12px] uppercase tracking-[0.16em] ${tone === "danger" ? "text-danger" : "text-ink-muted"}`}>
+        {children}
+        {tone === "muted" ? <span className="sb-caret ml-0.5 inline-block">▍</span> : null}
+      </p>
+    </div>
+  );
+}
 
 function Panel({ title, className = "", children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
@@ -400,7 +423,7 @@ function DefGrid({ rows }: { rows: [string, string | null | undefined][] }) {
   );
 }
 
-function AddressBlock({ addr }: { addr: Addr }) {
+function AddressBlock({ addr }: { addr: Address }) {
   const lines = [addr.line1, addr.line2, [addr.city, addr.state, addr.pincode].filter(Boolean).join(", "), addr.country].filter(Boolean);
   if (lines.length === 0) return <p className="text-[13.5px] text-ink-muted">—</p>;
   return (

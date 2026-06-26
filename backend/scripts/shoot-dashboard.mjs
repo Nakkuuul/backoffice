@@ -64,6 +64,16 @@ try {
   await page.screenshot({ path: `${OUT}/dash-company.png`, fullPage: true });
   console.log("shot dash-company");
 
+  // Company Info — edit mode
+  if (await clickText(page, "Edit profile")) {
+    await page.waitForFunction(() => document.body.innerText.toLowerCase().includes("save changes"), { timeout: 15000 }).catch(() => {});
+    await wait(800);
+    await page.screenshot({ path: `${OUT}/dash-company-edit.png`, fullPage: true });
+    console.log("shot dash-company-edit");
+    await clickText(page, "Cancel");
+    await wait(400);
+  }
+
   // Masters section expanded (the long nested list)
   await clickText(page, "Masters");
   await wait(450);
