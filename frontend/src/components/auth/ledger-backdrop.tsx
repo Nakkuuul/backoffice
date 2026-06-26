@@ -66,12 +66,21 @@ const CANDLES: Array<[number, number, number, number]> = [
 
 const BARS = [22, 34, 28, 41, 37, 48, 44, 56];
 
-const DONUT = [
-  { frac: 0.38, color: "rgba(110,31,42,0.5)" },
-  { frac: 0.27, color: "rgba(154,123,51,0.55)" },
-  { frac: 0.2, color: "rgba(31,77,58,0.5)" },
-  { frac: 0.15, color: "rgba(28,26,23,0.3)" },
-];
+const DONUT_C = 2 * Math.PI * 40; // donut circumference
+const DONUT = (() => {
+  let off = 0;
+  return [
+    { frac: 0.38, color: "rgba(110,31,42,0.5)" },
+    { frac: 0.27, color: "rgba(154,123,51,0.55)" },
+    { frac: 0.2, color: "rgba(31,77,58,0.5)" },
+    { frac: 0.15, color: "rgba(28,26,23,0.3)" },
+  ].map((s) => {
+    const len = s.frac * DONUT_C;
+    const seg = { ...s, len, off };
+    off += len;
+    return seg;
+  });
+})();
 
 const TICKER = [
   ["NIFTY 50", "+0.82%", true],
@@ -95,9 +104,6 @@ function Formula({ children, className = "" }: { children: React.ReactNode; clas
 }
 
 export function LedgerBackdrop() {
-  const C = 251.2; // donut circumference (2π·40)
-  let offset = 0;
-
   return (
     <>
       {/* ── Report tables ─────────────────────────────────────────────────── */}
@@ -201,25 +207,20 @@ export function LedgerBackdrop() {
       <div aria-hidden="true" className="pointer-events-none absolute top-[39%] right-[7%] hidden 2xl:block">
         <svg viewBox="0 0 100 100" className="h-24 w-24" style={{ overflow: "visible" }}>
           <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(28,26,23,0.08)" strokeWidth="9" />
-          {DONUT.map((seg, i) => {
-            const len = seg.frac * C;
-            const el = (
-              <circle
-                key={i}
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke={seg.color}
-                strokeWidth="9"
-                strokeDasharray={`${len} ${C - len}`}
-                strokeDashoffset={-offset}
-                transform="rotate(-90 50 50)"
-              />
-            );
-            offset += len;
-            return el;
-          })}
+          {DONUT.map((seg, i) => (
+            <circle
+              key={i}
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              stroke={seg.color}
+              strokeWidth="9"
+              strokeDasharray={`${seg.len} ${DONUT_C - seg.len}`}
+              strokeDashoffset={-seg.off}
+              transform="rotate(-90 50 50)"
+            />
+          ))}
           <text x="50" y="52" textAnchor="middle" fill="rgba(110,31,42,0.4)" fontSize="9" fontFamily="var(--font-mono)">
             ALLOC
           </text>

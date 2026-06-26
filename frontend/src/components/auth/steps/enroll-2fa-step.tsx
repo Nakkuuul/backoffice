@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
+/* eslint-disable @next/next/no-img-element */
 import { OtpInput } from "../otp-input";
 import { QrPlaceholder } from "../qr-placeholder";
 import { SubmitButton } from "../submit-button";
 import { StepHeader } from "../step-chrome";
-import type { SetupResult } from "@/lib/auth-client";
+import type { SetupResponse } from "@/lib/api";
 
 interface EnrollStepProps {
   loading: boolean;
-  setup: SetupResult | null;
+  setup: SetupResponse | null;
   recoveryCodes: string[] | null;
   onConfirm: (code: string) => void;
   onContinue: () => void;
@@ -107,7 +108,17 @@ export function EnrollTwoFactorStep({
       />
 
       <div className="mt-6 flex flex-col items-center gap-5">
-        <QrPlaceholder size={188} />
+        {setup?.qrCode ? (
+          <img
+            src={setup.qrCode}
+            alt="Two-factor QR code"
+            width={188}
+            height={188}
+            className="rounded-[10px] border border-rule-strong bg-white p-3"
+          />
+        ) : (
+          <QrPlaceholder size={188} />
+        )}
 
         <div className="w-full rounded-[8px] border border-rule bg-paper px-3.5 py-2.5">
           <div className="flex items-center justify-between gap-3">

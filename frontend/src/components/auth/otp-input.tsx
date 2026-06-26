@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ClipboardEvent,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 
 interface OtpInputProps {
   value: string;
@@ -34,22 +28,22 @@ export function OtpInput({
   invalid = false,
 }: OtpInputProps) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const [cells, setCells] = useState<string[]>(() => Array(length).fill(""));
 
-  // External reset (e.g. parent clears the code after an error).
-  useEffect(() => {
-    if (value === "") setCells(Array(length).fill(""));
-  }, [value, length]);
+  // Fully controlled: cells are derived from `value` (no internal state), so a
+  // parent reset (value="") just clears the boxes — no setState-in-effect.
+  const cells = Array.from({ length }, (_, i) => value[i] ?? "");
 
   useEffect(() => {
     if (autoFocus) refs.current[0]?.focus();
   }, [autoFocus]);
 
   function emit(next: string[]) {
-    setCells(next);
     const joined = next.join("");
+    // Only fire onComplete on the transition into a full code (not on every
+    // keystroke once full), so it can't double-submit.
+    const wasComplete = cells.length === length && cells.every((c) => c !== "");
     onChange(joined);
-    if (next.every((c) => c !== "")) onComplete?.(joined);
+    if (!wasComplete && next.every((c) => c !== "")) onComplete?.(joined);
   }
 
   function handleChange(i: number, raw: string) {

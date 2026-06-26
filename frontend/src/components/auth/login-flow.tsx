@@ -8,19 +8,21 @@ import { CredentialsStep } from "./steps/credentials-step";
 import { ChangePasswordStep } from "./steps/change-password-step";
 import { EnrollTwoFactorStep } from "./steps/enroll-2fa-step";
 import { VerifyTwoFactorStep } from "./steps/verify-2fa-step";
-import { storeToken } from "@/lib/api";
 import {
+  ApiError,
+  login as apiLogin,
+  changePassword as apiChangePassword,
+  setupTwoFactor as apiSetup,
+  enableTwoFactor as apiEnable,
+  verifyTwoFactor as apiVerify,
+  storeSession,
+  type AuthResponse,
+  type SetupResponse,
   type Stage,
-  type SetupResult,
-  FlowError,
-  submitCredentials,
-  submitNewPassword,
-  beginTwoFactorSetup,
-  confirmTwoFactor,
-  verifyTwoFactor,
-} from "@/lib/auth-client";
+} from "@/lib/api";
 
-const USER_STORAGE_KEY = "bo_user";
+type UiStage = "credentials" | Stage;
+
 const PREVIEW_CODES = [
   "K7H2M-9QXR4-WP3JD",
   "T8N5B-2VC6F-LMZ9Q",
@@ -30,33 +32,33 @@ const PREVIEW_CODES = [
   "L9P4O-3IU7Y-TR6EW",
 ];
 
-const VALID_STAGES = new Set<Stage>([
-  "credentials",
-  "change_password",
-  "enroll_2fa",
-  "verify_2fa",
-  "authenticated",
-]);
+const VALID: UiStage[] = ["credentials", "change_password", "enroll_2fa", "verify_2fa", "authenticated"];
 
 export function LoginFlow() {
   const router = useRouter();
 
-  const [stage, setStage] = useState<Stage>("credentials");
+  const [stage, setStage] = useState<UiStage>("credentials");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [setup, setSetup] = useState<SetupResult | null>(null);
+  const [password, setPassword] = useState(""); // carried as currentPassword into change-password
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [setup, setSetup] = useState<SetupResponse | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
 
   const previewRef = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
+  // Synchronous re-entrancy guard so a step can't be submitted twice (e.g. the
+  // OTP onComplete + Enter/click racing before `loading` propagates).
+  const busyRef = useRef(false);
 
-  // Preview aid (design review only): /login?stage=verify_2fa etc. "recovery"
-  // jumps straight to the enrolled recovery-codes view. Never navigates away.
+  // Design-preview aid (no APIs called): /login?stage=verify_2fa etc. "recovery"
+  // jumps to the enrolled recovery-codes view. Never navigates away.
   useEffect(() => {
+    /* One-shot mount seed for design preview only; the query string isn't known
+       during SSR so this can't be a lazy initializer without a hydration mismatch. */
+    /* eslint-disable react-hooks/set-state-in-effect */
     const param = new URLSearchParams(window.location.search).get("stage");
     if (!param) return;
     previewRef.current = true;
@@ -64,27 +66,38 @@ export function LoginFlow() {
       setStage("enroll_2fa");
       setSetup({ qrCode: null, otpauthUrl: "", secret: "JBSWY3DPEHPK3PXP" });
       setRecoveryCodes(PREVIEW_CODES);
-    } else if (VALID_STAGES.has(param as Stage)) {
-      setStage(param as Stage);
+    } else if ((VALID as string[]).includes(param)) {
+      setStage(param as UiStage);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Fetch the 2FA setup payload when entering enrollment.
+  // Fetch the real 2FA setup payload (QR + secret) when entering enrollment.
   useEffect(() => {
-    if (stage !== "enroll_2fa" || setup || recoveryCodes) return;
+    if (stage !== "enroll_2fa" || setup || recoveryCodes || !challengeToken) return;
     let cancelled = false;
-    beginTwoFactorSetup(email).then(
+    apiSetup(challengeToken).then(
       (res) => !cancelled && setSetup(res),
-      () => !cancelled && setError("Couldn't start two-factor setup. Try again."),
+      (err) => {
+        if (cancelled) return;
+        // A 401 here means the interim sign-in token expired (no code involved).
+        setError(
+          err instanceof ApiError && err.status === 401
+            ? "Your sign-in session expired. Please sign in again."
+            : err instanceof ApiError
+              ? err.message
+              : "Couldn't start two-factor setup. Please try again.",
+        );
+      },
     );
     return () => {
       cancelled = true;
     };
-  }, [stage, setup, recoveryCodes, email]);
+  }, [stage, setup, recoveryCodes, challengeToken]);
 
   const fail = useCallback((err: unknown) => {
     const message =
-      err instanceof FlowError || err instanceof Error
+      err instanceof ApiError || err instanceof Error
         ? err.message
         : "Something went wrong. Please try again.";
     setError(message);
@@ -93,90 +106,102 @@ export function LoginFlow() {
     window.requestAnimationFrame(() => errorRef.current?.focus());
   }, []);
 
-  const advance = useCallback((nextStage: Stage) => {
-    setError(null);
-    setLoading(false);
-    setStage(nextStage);
-  }, []);
-
-  const finish = useCallback(() => {
-    // MOCK session persistence so the placeholder dashboard renders. Replace
-    // with the real { token, user } from the backend on integration.
-    storeToken("mock-session-token");
-    try {
-      window.localStorage.setItem(
-        USER_STORAGE_KEY,
-        JSON.stringify({ email: email || "user@sapphirebroking.net", role: "operations" }),
-      );
-    } catch {
-      /* storage unavailable — non-fatal */
-    }
+  const enterAuthenticated = useCallback(() => {
     setError(null);
     setStage("authenticated");
-    if (!previewRef.current) {
-      window.setTimeout(() => router.replace("/dashboard"), 1300);
-    }
-  }, [email, router]);
+    if (!previewRef.current) window.setTimeout(() => router.replace("/dashboard"), 1300);
+  }, [router]);
 
-  // ── Stage actions ──────────────────────────────────────────────────────────
-  const onCredentials = useCallback(
-    async (e: string, p: string) => {
-      setLoading(true);
-      setError(null);
-      setEmail(e);
-      setPassword(p);
-      try {
-        const res = await submitCredentials(e, p);
-        if (res.stage === "authenticated") finish();
-        else advance(res.stage);
-      } catch (err) {
-        fail(err);
+  // Apply a backend response: advance to the next challenge, or finish.
+  const apply = useCallback(
+    (res: AuthResponse) => {
+      setChallengeToken(res.token);
+      // The login password is only needed as `currentPassword` for the
+      // change-password step; drop it from memory as soon as we move past it.
+      if (res.stage !== "change_password") setPassword("");
+      if (res.stage === "authenticated") {
+        storeSession(res);
+        enterAuthenticated();
+      } else {
+        setError(null);
+        setLoading(false);
+        setStage(res.stage);
       }
     },
-    [advance, finish, fail],
+    [enterAuthenticated],
+  );
+
+  // ── Stage actions (busyRef makes them single-flight) ───────────────────────
+  const onCredentials = useCallback(
+    async (email: string, p: string) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setLoading(true);
+      setError(null);
+      setPassword(p);
+      try {
+        apply(await apiLogin(email, p));
+      } catch (err) {
+        fail(err);
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    [apply, fail],
   );
 
   const onChangePassword = useCallback(
     async (newPassword: string) => {
+      if (!challengeToken || busyRef.current) return;
+      busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        const res = await submitNewPassword(password, newPassword);
-        advance(res.stage);
+        apply(await apiChangePassword(challengeToken, password, newPassword));
       } catch (err) {
         fail(err);
+      } finally {
+        busyRef.current = false;
       }
     },
-    [password, advance, fail],
+    [challengeToken, password, apply, fail],
   );
 
   const onConfirmEnroll = useCallback(
     async (code: string) => {
+      if (!challengeToken || busyRef.current) return;
+      busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        const res = await confirmTwoFactor(code);
+        const res = await apiEnable(challengeToken, code);
+        storeSession(res); // enable returns the authenticated session + recovery codes
         setRecoveryCodes(res.recoveryCodes);
         setLoading(false);
       } catch (err) {
         fail(err);
+      } finally {
+        busyRef.current = false;
       }
     },
-    [fail],
+    [challengeToken, fail],
   );
 
   const onVerify = useCallback(
     async (code: string) => {
+      if (!challengeToken || busyRef.current) return;
+      busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        await verifyTwoFactor(code);
-        finish();
+        apply(await apiVerify(challengeToken, code));
       } catch (err) {
         fail(err);
+      } finally {
+        busyRef.current = false;
       }
     },
-    [finish, fail],
+    [challengeToken, apply, fail],
   );
 
   const sealState: "idle" | "press" | "verified" =
@@ -184,7 +209,6 @@ export function LoginFlow() {
 
   return (
     <div className="w-full max-w-[420px] px-6 py-12 sm:px-10">
-      {/* Mobile-only seal above the form. */}
       <div className="mb-8 flex justify-center lg:hidden">
         <Seal size={56} state={sealState} />
       </div>
@@ -196,9 +220,7 @@ export function LoginFlow() {
         className={`sb-animate-step ${shake ? "sb-animate-shake" : ""}`}
         onAnimationEnd={() => setShake(false)}
       >
-        {stage === "credentials" ? (
-          <CredentialsStep loading={loading} initialEmail={email} onSubmit={onCredentials} />
-        ) : null}
+        {stage === "credentials" ? <CredentialsStep loading={loading} onSubmit={onCredentials} /> : null}
 
         {stage === "change_password" ? (
           <ChangePasswordStep loading={loading} onSubmit={onChangePassword} />
@@ -210,7 +232,7 @@ export function LoginFlow() {
             setup={setup}
             recoveryCodes={recoveryCodes}
             onConfirm={onConfirmEnroll}
-            onContinue={finish}
+            onContinue={enterAuthenticated}
           />
         ) : null}
 
@@ -218,7 +240,7 @@ export function LoginFlow() {
           <VerifyTwoFactorStep loading={loading} invalid={Boolean(error)} onSubmit={onVerify} />
         ) : null}
 
-        {stage === "authenticated" ? <AuthenticatedView email={email} /> : null}
+        {stage === "authenticated" ? <AuthenticatedView /> : null}
       </div>
 
       {stage !== "authenticated" ? (
@@ -236,7 +258,7 @@ export function LoginFlow() {
   );
 }
 
-function AuthenticatedView({ email }: { email: string }) {
+function AuthenticatedView() {
   return (
     <div className="flex flex-col items-center py-6 text-center">
       <Seal size={72} state="verified" />
@@ -249,14 +271,10 @@ function AuthenticatedView({ email }: { email: string }) {
       >
         You&rsquo;re in.
       </h1>
-      <p className="mt-1 text-[14px] text-ink-muted">
-        {email ? `Signed in as ${email}` : "Signed in."}
-      </p>
       <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted">
         Establishing secure session
         <span className="sb-caret ml-0.5 inline-block">▍</span>
       </p>
-      {/* Static no-JS fallback link. */}
       <noscript>
         <a href="/dashboard" className="mt-4 text-[13px] text-oxblood underline">
           Continue
