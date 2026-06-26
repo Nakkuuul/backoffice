@@ -31,11 +31,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning: browser extensions (e.g. Dark Reader, Grammarly)
+    // stamp attributes onto <html>/<body> before React hydrates. This silences
+    // those benign, extension-only attribute mismatches — it does NOT mask real
+    // app mismatches (those would still warn on the offending element).
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
+        {children}
+      </body>
     </html>
   );
 }
