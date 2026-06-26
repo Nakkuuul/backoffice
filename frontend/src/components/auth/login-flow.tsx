@@ -15,7 +15,6 @@ import {
   setupTwoFactor as apiSetup,
   enableTwoFactor as apiEnable,
   verifyTwoFactor as apiVerify,
-  storeSession,
   type AuthResponse,
   type SetupResponse,
   type Stage,
@@ -42,19 +41,15 @@ export function LoginFlow() {
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
 
-  const [password, setPassword] = useState(""); // carried as currentPassword into change-password
-  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [password, setPassword] = useState(""); // currentPassword for the change-password step
   const [setup, setSetup] = useState<SetupResponse | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
 
   const previewRef = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
-  // Synchronous re-entrancy guard so a step can't be submitted twice (e.g. the
-  // OTP onComplete + Enter/click racing before `loading` propagates).
-  const busyRef = useRef(false);
+  const busyRef = useRef(false); // synchronous single-flight guard
 
-  // Design-preview aid (no APIs called): /login?stage=verify_2fa etc. "recovery"
-  // jumps to the enrolled recovery-codes view. Never navigates away.
+  // Design-preview aid (no APIs called): /login?stage=verify_2fa etc.
   useEffect(() => {
     /* One-shot mount seed for design preview only; the query string isn't known
        during SSR so this can't be a lazy initializer without a hydration mismatch. */
@@ -72,15 +67,14 @@ export function LoginFlow() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Fetch the real 2FA setup payload (QR + secret) when entering enrollment.
+  // Fetch the 2FA setup payload (QR + secret) when entering enrollment.
   useEffect(() => {
-    if (stage !== "enroll_2fa" || setup || recoveryCodes || !challengeToken) return;
+    if (stage !== "enroll_2fa" || setup || recoveryCodes || previewRef.current) return;
     let cancelled = false;
-    apiSetup(challengeToken).then(
+    apiSetup().then(
       (res) => !cancelled && setSetup(res),
       (err) => {
         if (cancelled) return;
-        // A 401 here means the interim sign-in token expired (no code involved).
         setError(
           err instanceof ApiError && err.status === 401
             ? "Your sign-in session expired. Please sign in again."
@@ -93,7 +87,7 @@ export function LoginFlow() {
     return () => {
       cancelled = true;
     };
-  }, [stage, setup, recoveryCodes, challengeToken]);
+  }, [stage, setup, recoveryCodes]);
 
   const fail = useCallback((err: unknown) => {
     const message =
@@ -108,19 +102,17 @@ export function LoginFlow() {
 
   const enterAuthenticated = useCallback(() => {
     setError(null);
-    setStage("authenticated");
+    setStage("authenticated"); // tokens are already in httpOnly cookies (set by the BFF)
     if (!previewRef.current) window.setTimeout(() => router.replace("/dashboard"), 1300);
   }, [router]);
 
   // Apply a backend response: advance to the next challenge, or finish.
   const apply = useCallback(
     (res: AuthResponse) => {
-      setChallengeToken(res.token);
-      // The login password is only needed as `currentPassword` for the
-      // change-password step; drop it from memory as soon as we move past it.
+      // The login password is only the change-password step's currentPassword;
+      // drop it from memory as soon as we move past that step.
       if (res.stage !== "change_password") setPassword("");
       if (res.stage === "authenticated") {
-        storeSession(res);
         enterAuthenticated();
       } else {
         setError(null);
@@ -152,30 +144,29 @@ export function LoginFlow() {
 
   const onChangePassword = useCallback(
     async (newPassword: string) => {
-      if (!challengeToken || busyRef.current) return;
+      if (busyRef.current) return;
       busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        apply(await apiChangePassword(challengeToken, password, newPassword));
+        apply(await apiChangePassword(password, newPassword));
       } catch (err) {
         fail(err);
       } finally {
         busyRef.current = false;
       }
     },
-    [challengeToken, password, apply, fail],
+    [password, apply, fail],
   );
 
   const onConfirmEnroll = useCallback(
     async (code: string) => {
-      if (!challengeToken || busyRef.current) return;
+      if (busyRef.current) return;
       busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        const res = await apiEnable(challengeToken, code);
-        storeSession(res); // enable returns the authenticated session + recovery codes
+        const res = await apiEnable(code); // authenticated session cookies set by the BFF
         setRecoveryCodes(res.recoveryCodes);
         setLoading(false);
       } catch (err) {
@@ -184,24 +175,24 @@ export function LoginFlow() {
         busyRef.current = false;
       }
     },
-    [challengeToken, fail],
+    [fail],
   );
 
   const onVerify = useCallback(
     async (code: string) => {
-      if (!challengeToken || busyRef.current) return;
+      if (busyRef.current) return;
       busyRef.current = true;
       setLoading(true);
       setError(null);
       try {
-        apply(await apiVerify(challengeToken, code));
+        apply(await apiVerify(code));
       } catch (err) {
         fail(err);
       } finally {
         busyRef.current = false;
       }
     },
-    [challengeToken, apply, fail],
+    [apply, fail],
   );
 
   const sealState: "idle" | "press" | "verified" =
@@ -264,10 +255,7 @@ function AuthenticatedView() {
       <Seal size={72} state="verified" />
       <h1
         className="mt-6 text-[22px] text-ink"
-        style={{
-          fontFamily: "var(--font-display)",
-          fontVariationSettings: "'opsz' 30, 'wght' 520",
-        }}
+        style={{ fontFamily: "var(--font-display)", fontVariationSettings: "'opsz' 30, 'wght' 520" }}
       >
         You&rsquo;re in.
       </h1>

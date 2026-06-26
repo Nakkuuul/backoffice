@@ -1,0 +1,43 @@
+COOKIE SECURITY & CSRF REVIEW SUMMARY
+=========================================
+
+VERIFIED GOOD:
+1. httpOnly: true - Cookies NOT readable by JavaScript (confirmed in code line 19)
+2. Secure: true in PROD - HTTPS-only in production (line 19: secure: PROD)
+3. SameSite: "lax" - Cross-site POST requests blocked (line 19)
+4. path: "/" - Correct scope (line 19)
+5. TTL: 
+   - Access: 24 hours (reasonable, short-lived)
+   - Refresh: 30 days (reasonable for refresh rotation)
+   - Challenge: 10 minutes (appropriate for step-up auth)
+6. CSRF Defense: Multiple layers
+   - SameSite=Lax on all cookies
+   - Challenge cookie requirement for sensitive operations
+   - fetch() with same-origin credentials scope
+   - No explicit CSRF tokens needed
+7. Logout: Best-effort server-side revocation + local cookie clearing (route lines 11-14)
+8. Token Stripping: Backend tokens removed from JSON before reaching browser (strip() function)
+9. Token Rotation: Access token refresh implemented in /me endpoint (lines 26-31)
+
+FINDINGS - SECURITY ISSUES:
+
+Issue 1: Missing Explicit Cookie Deletion in Login (Medium Severity)
+Location: D:/Aand/backoffice/frontend/src/lib/server/auth-bff.ts, lines 70-74 (setAccessCookies function)
+Problem: When setting new access cookies during login, old cookies are not explicitly deleted first
+Risk: Session fixation - if attacker controls old cookie and backend has bugs, old session could persist
+Mitigation: Backend session invalidation (assumed working)
+Fix: Add explicit delete before set in setAccessCookies()
+
+Issue 2: Logout Does Not Verify Authentication (Low Severity)
+Location: D:/Aand/backoffice/frontend/src/app/bff/auth/logout/route.ts, lines 6-16
+Problem: Logout route works even if no access token present (at = null at line 7)
+Risk: Unnecessary backend call (best-effort revocation fails silently)
+Impact: Non-critical (cookies still cleared, session invalidation attempted)
+Fix: Optional - Could require access token to be present for logout verification
+
+VERIFIED CLEAN:
+- All cookies have correct flags: httpOnly=true, Secure in PROD, SameSite=Lax, path=/
+- CSRF defenses are adequate: No direct CSRF vulnerability identified
+- Step-up challenge flow prevents unauthorized state changes
+- Token lifetime values are appropriate
+- Access token refresh mechanism is implemented correctly

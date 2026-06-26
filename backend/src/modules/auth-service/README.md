@@ -116,8 +116,11 @@ npm run auth:test-http   # HTTP: the staged login over the wire (gate codes, QR,
 
 ## TODO / roadmap
 - [x] Rate limiting on login + 2FA + change-password (in-memory).
+- [x] httpOnly-cookie tokens for the browser — handled at the **frontend BFF**
+  (`frontend/src/app/bff/auth/*` + `lib/server/auth-bff.ts`): the backend still
+  returns tokens as JSON, and the Next route handlers store the access / refresh /
+  interim tokens in httpOnly+SameSite cookies so JS never sees them.
 - [ ] Back rate-limiting with Redis for a multi-node fleet (currently per-process).
 - [ ] Audit log of auth events (login, 2FA enable/verify, resets).
-- [ ] httpOnly refresh-token cookie option (vs JSON body) for browser clients.
 - [ ] Password strength policy + breached-password check.
 - [ ] SSO / WebAuthn (passkeys) as alternative second factors.

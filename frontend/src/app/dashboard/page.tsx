@@ -2,17 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ApiError,
-  getToken,
-  getRefresh,
-  getMe,
-  refresh as apiRefresh,
-  logout as apiLogout,
-  storeSession,
-  clearSession,
-  type MeResponse,
-} from "@/lib/api";
+import { getMe, logout as apiLogout, type MeResponse } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,53 +11,29 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      let token = getToken();
-      if (!token) {
-        router.replace("/login");
-        return;
-      }
-      const finish = (res: MeResponse) => {
-        if (!cancelled) {
-          setMe(res);
-          setStatus("ready");
-        }
-      };
-      try {
-        finish(await getMe(token));
-      } catch (err) {
-        // Access token expired → try a single refresh, then retry /me.
-        const rt = getRefresh();
-        if (err instanceof ApiError && err.status === 401 && rt) {
-          try {
-            const refreshed = await apiRefresh(rt);
-            storeSession(refreshed);
-            token = refreshed.token;
-            finish(await getMe(token));
-            return;
-          } catch {
-            /* fall through to sign-out */
-          }
-        }
-        clearSession();
+    // The httpOnly cookie is the source of truth: /bff/auth/me 401s (and the BFF
+    // attempts a refresh first) → not authenticated → back to /login.
+    getMe().then(
+      (res) => {
+        if (cancelled) return;
+        setMe(res);
+        setStatus("ready");
+      },
+      () => {
         if (!cancelled) router.replace("/login");
-      }
-    })();
+      },
+    );
     return () => {
       cancelled = true;
     };
   }, [router]);
 
   const signOut = useCallback(async () => {
-    const token = getToken();
-    if (token) {
-      try {
-        await apiLogout(token, getRefresh());
-      } catch {
-        /* best-effort */
-      }
+    try {
+      await apiLogout();
+    } catch {
+      /* best-effort */
     }
-    clearSession();
     router.replace("/login");
   }, [router]);
 
@@ -110,7 +76,7 @@ export default function DashboardPage() {
             ["Last login", user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "—"],
           ].map(([k, v]) => (
             <div key={k} className="contents">
-              <dt className="text-ink-muted uppercase tracking-[0.1em]">{k}</dt>
+              <dt className="uppercase tracking-[0.1em] text-ink-muted">{k}</dt>
               <dd className="text-ink">{v}</dd>
             </div>
           ))}

@@ -1,0 +1,43 @@
+SESSION FIXATION VULNERABILITY - DETAILED ANALYSIS
+
+Location: setAccessCookies() function
+File: D:/Aand/backoffice/frontend/src/lib/server/auth-bff.ts (lines 70-74)
+
+Current Implementation:
+```
+export function setAccessCookies(res: NextResponse, data: any) {
+  if (data?.token) res.cookies.set(COOKIE.access, data.token, { ...BASE, maxAge: TTL.access });
+  if (data?.refreshToken) res.cookies.set(COOKIE.refresh, data.refreshToken, { ...BASE, maxAge: TTL.refresh });
+  res.cookies.delete(COOKIE.challenge);
+}
+```
+
+Vulnerability Scenario:
+1. User with stale/attacker-controlled bo_at or bo_rt cookies
+2. User performs login with valid credentials
+3. Backend returns new tokens (assuming server-side session management works)
+4. Frontend calls setAccessCookies() which OVERWRITES old tokens
+5. However, overwriting is implicit (no explicit delete first)
+6. If backend has a bug or race condition, old token could theoretically remain
+7. Session fixation: Attacker's old session identifier could be reused
+
+Defense Layers:
+Layer 1 (Frontend): setAccessCookies() does NOT explicitly clear old cookies
+  - Risk: Silent replacement, no explicit deletion
+  - Mitigation: Backend tokens are fresh (backend is source of truth)
+
+Layer 2 (Backend): Backend must invalidate old sessions
+  - Assumption: Backend properly implements session invalidation
+  - Risk: If backend has bugs, old sessions could persist
+
+Assessment:
+- REAL ISSUE: No explicit cookie clearing before setting new ones in login flow
+- SEVERITY: MEDIUM (depends on backend session management quality)
+- LIKELIHOOD: LOW (would require both frontend oversight AND backend bug)
+- IMPACT: Session fixation - attacker could maintain access after target user logs in
+
+Recommended Fix:
+Explicit cookie clearing in setAccessCookies():
+1. Delete bo_at and bo_rt before setting new values
+2. Ensures stale cookies are definitely removed
+3. Follows OWASP session fixation prevention guideline

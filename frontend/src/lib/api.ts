@@ -1,21 +1,10 @@
 /**
- * Typed API client for the Sapphire Broking backoffice auth flow.
- *
- * Base URL: NEXT_PUBLIC_API_URL when set (absolute origin in prod), else the
- * same-origin `/api/v1`, proxied to the backend by the dev `rewrites()` in
- * next.config.ts (so dev is CORS-free).
- *
- * Backend auth is a STATE MACHINE. `POST /auth/login` returns either a fully
- * authenticated result or a challenge with a short-lived interim token; the
- * step-up calls (change-password, 2fa/*) carry that interim token until login
- * completes, at which point a real access + refresh pair is issued.
+ * Client API for the auth flow. Talks ONLY to same-origin /bff/auth/* route
+ * handlers (the token-handler BFF). Tokens live in httpOnly cookies set by the
+ * BFF and are never readable here — so there is nothing to store client-side.
  */
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "/api/v1").replace(/\/$/, "");
-
-export const TOKEN_STORAGE_KEY = "bo_token";
-export const REFRESH_STORAGE_KEY = "bo_refresh";
-export const USER_STORAGE_KEY = "bo_user";
+const BFF = "/bff/auth";
 
 export type Stage = "change_password" | "enroll_2fa" | "verify_2fa" | "authenticated";
 export type UserType = "broker" | "client";
@@ -35,11 +24,9 @@ export interface AuthUser {
   createdAt: string;
 }
 
-/** Login / step-up response. `token` is interim while staged, the access token once authenticated. */
+/** Login / step-up response (tokens are stripped by the BFF before reaching JS). */
 export interface AuthResponse {
   stage: Stage;
-  token: string;
-  refreshToken?: string;
   user?: AuthUser;
   permissions?: string[];
   mustChangePassword?: boolean;
@@ -83,29 +70,18 @@ function isErrorBody(
   return !!e && typeof e.code === "string" && typeof e.message === "string";
 }
 
-interface RequestOpts {
-  method?: string;
-  token?: string | null;
-  body?: unknown;
-}
-
-async function request<T>(path: string, { method = "GET", token, body }: RequestOpts = {}): Promise<T> {
+async function call<T>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  const { method = "GET", body } = opts;
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await fetch(`${BFF}${path}`, {
       method,
-      headers: {
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      credentials: "same-origin",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(
-      "Could not reach the server. Check your connection and try again.",
-      "NETWORK_ERROR",
-      0,
-    );
+    throw new ApiError("Could not reach the server. Please try again.", "NETWORK_ERROR", 0);
   }
 
   if (res.status === 204) return null as T;
@@ -114,7 +90,7 @@ async function request<T>(path: string, { method = "GET", token, body }: Request
   try {
     payload = await res.json();
   } catch {
-    /* empty / non-JSON body */
+    /* empty / non-JSON */
   }
 
   if (!res.ok) {
@@ -126,92 +102,22 @@ async function request<T>(path: string, { method = "GET", token, body }: Request
   return payload as T;
 }
 
-/* ── Auth endpoints ─────────────────────────────────────────────────────────── */
+/* ── Auth flow (cookies handled server-side by the BFF) ─────────────────────── */
 
 export const login = (email: string, password: string) =>
-  request<AuthResponse>("/auth/login", { method: "POST", body: { email, password } });
+  call<AuthResponse>("/login", { method: "POST", body: { email, password } });
 
-export const changePassword = (token: string, currentPassword: string, newPassword: string) =>
-  request<AuthResponse>("/auth/change-password", {
-    method: "POST",
-    token,
-    body: { currentPassword, newPassword },
-  });
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  call<AuthResponse>("/change-password", { method: "POST", body: { currentPassword, newPassword } });
 
-export const setupTwoFactor = (token: string) =>
-  request<SetupResponse>("/auth/2fa/setup", { method: "POST", token });
+export const setupTwoFactor = () => call<SetupResponse>("/2fa/setup", { method: "POST" });
 
-export const enableTwoFactor = (token: string, code: string) =>
-  request<EnableResponse>("/auth/2fa/enable", { method: "POST", token, body: { code } });
+export const enableTwoFactor = (code: string) =>
+  call<EnableResponse>("/2fa/enable", { method: "POST", body: { code } });
 
-export const verifyTwoFactor = (token: string, code: string) =>
-  request<AuthResponse>("/auth/2fa/verify", { method: "POST", token, body: { code } });
+export const verifyTwoFactor = (code: string) =>
+  call<AuthResponse>("/2fa/verify", { method: "POST", body: { code } });
 
-export const getMe = (token: string) => request<MeResponse>("/auth/me", { token });
+export const getMe = () => call<MeResponse>("/me");
 
-export const refresh = (refreshToken: string) =>
-  request<AuthResponse>("/auth/refresh", { method: "POST", body: { refreshToken } });
-
-export const logout = (token: string, refreshToken?: string | null) =>
-  request<null>("/auth/logout", {
-    method: "POST",
-    token,
-    body: refreshToken ? { refreshToken } : {},
-  });
-
-/* ── Client-side session persistence ──────────────────────────────────────────
- * SECURITY NOTE: tokens live in localStorage — simple and works across tabs, but
- * readable by any script, so an XSS would expose them. Accepted for now; the
- * hardening path is an httpOnly + Secure + SameSite cookie set by a Next.js Route
- * Handler so the token is never reachable from JS. TODO before production.
- * ──────────────────────────────────────────────────────────────────────────── */
-
-const safe = {
-  set(k: string, v: string) {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(k, v);
-    } catch {
-      /* private mode / disabled */
-    }
-  },
-  get(k: string) {
-    if (typeof window === "undefined") return null;
-    try {
-      return window.localStorage.getItem(k);
-    } catch {
-      return null;
-    }
-  },
-  del(k: string) {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.removeItem(k);
-    } catch {
-      /* ignore */
-    }
-  },
-};
-
-/** Persist the authenticated session (access + refresh + user). */
-export function storeSession(res: AuthResponse): void {
-  safe.set(TOKEN_STORAGE_KEY, res.token);
-  if (res.refreshToken) safe.set(REFRESH_STORAGE_KEY, res.refreshToken);
-  if (res.user) safe.set(USER_STORAGE_KEY, JSON.stringify(res.user));
-}
-export const getToken = () => safe.get(TOKEN_STORAGE_KEY);
-export const getRefresh = () => safe.get(REFRESH_STORAGE_KEY);
-export function getStoredUser(): AuthUser | null {
-  const raw = safe.get(USER_STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-export function clearSession(): void {
-  safe.del(TOKEN_STORAGE_KEY);
-  safe.del(REFRESH_STORAGE_KEY);
-  safe.del(USER_STORAGE_KEY);
-}
+export const logout = () => call<null>("/logout", { method: "POST" });

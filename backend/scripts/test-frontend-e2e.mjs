@@ -81,6 +81,14 @@ try {
   const dash = await page.evaluate(() => document.body.innerText);
   check("dashboard renders /auth/me", dash.includes(email) && dash.includes("operations"), "welcome + email + role");
 
+  // httpOnly hardening: tokens must NOT be readable by JS, and the access cookie
+  // must carry the httpOnly flag.
+  const docCookie = await page.evaluate(() => document.cookie);
+  check("tokens not exposed to JS (document.cookie)", !/bo_at|bo_rt|bo_ct/.test(docCookie), docCookie || "(empty)");
+  const cookies = await page.cookies();
+  const at = cookies.find((c) => c.name === "bo_at");
+  check("access cookie is httpOnly", Boolean(at && at.httpOnly), at ? `httpOnly=${at.httpOnly}` : "missing");
+
   const out = "C:/Users/hp/AppData/Local/Temp/claude/D--Aand-backoffice/ca8271f1-b96d-48ad-b8b1-b8431f78893c/scratchpad";
   await page.screenshot({ path: out + "/e2e-dashboard.png" });
 
