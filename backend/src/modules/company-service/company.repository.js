@@ -18,8 +18,6 @@ const SCALAR = {
   website: 'website',
   supportEmail: 'support_email',
   grievanceEmail: 'grievance_email',
-  nsdlDpId: 'nsdl_dp_id',
-  cdslDpId: 'cdsl_dp_id',
   baseCurrency: 'base_currency',
   financialYearStart: 'financial_year_start',
   timezone: 'timezone',
@@ -31,6 +29,7 @@ const JSONB = {
   complianceOfficer: 'compliance_officer',
   principalOfficer: 'principal_officer',
   keyPersonnel: 'key_personnel',
+  depositories: 'depositories',
   bankAccounts: 'bank_accounts',
 };
 
@@ -88,6 +87,7 @@ const M_MAP = {
   exchange: 'exchange',
   membershipType: 'membership_type',
   tradingMemberId: 'trading_member_id',
+  clearingMode: 'clearing_mode',
   clearingMemberId: 'clearing_member_id',
   cmCode: 'cm_code',
   registrationNo: 'registration_no',
@@ -110,14 +110,17 @@ export async function findMembership(id) {
 export async function createMembership(input) {
   const { rows } = await query(
     `INSERT INTO company_memberships
-       (exchange, membership_type, trading_member_id, clearing_member_id, cm_code, registration_no, segments, active, effective_from, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+       (exchange, membership_type, trading_member_id, clearing_mode, clearing_member_id, cm_code,
+        third_party_clearer, registration_no, segments, active, effective_from, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12) RETURNING *`,
     [
       input.exchange,
       input.membershipType ?? null,
       input.tradingMemberId ?? null,
+      input.clearingMode ?? 'self',
       input.clearingMemberId ?? null,
       input.cmCode ?? null,
+      JSON.stringify(input.thirdPartyClearer ?? {}),
       input.registrationNo ?? null,
       input.segments ?? [],
       input.active ?? true,
@@ -136,6 +139,10 @@ export async function updateMembership(id, fields) {
       vals.push(fields[key]);
       sets.push(`${col} = $${vals.length}`);
     }
+  }
+  if (fields.thirdPartyClearer !== undefined) {
+    vals.push(JSON.stringify(fields.thirdPartyClearer));
+    sets.push(`third_party_clearer = $${vals.length}::jsonb`);
   }
   if (sets.length === 0) return findMembership(id);
   sets.push(`updated_at = now()`);

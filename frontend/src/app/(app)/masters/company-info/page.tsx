@@ -47,8 +47,18 @@ const COMPANY = {
       { name: "Nakul Pratap Thakur", role: "Managing Director", din: "08123456", pan: "ABCPT1234M", email: "nakul@sapphirebroking.net", phone: "+91 98220 33333" },
       { name: "Priya Sharma", role: "Director", din: "08234567", pan: "ABCPS2345N", email: "priya@sapphirebroking.net", phone: "+91 98220 44444" },
     ],
-    nsdlDpId: "IN303456",
-    cdslDpId: "12088700",
+    depositories: [
+      { depository: "NSDL", mode: "self", dpId: "IN303456", dpName: "Sapphire Broking Private Limited", sebiRegNo: "IN-DP-NSDL-2019-001", active: true, thirdParty: null },
+      {
+        depository: "CDSL",
+        mode: "third_party",
+        dpId: "12088700",
+        dpName: null,
+        sebiRegNo: null,
+        active: true,
+        thirdParty: { name: "Globe Capital DP Services Ltd", dpId: "12088700", sebiRegNo: "IN-DP-CDSL-2014-072", contactPerson: "Operations Desk", email: "dp@globecapital.example", phone: "+91 22 4000 0000", agreementRef: "DP/2019/0042" },
+      },
+    ],
     bankAccounts: [
       { label: "Client Settlement", bankName: "HDFC Bank", accountNo: "50200012345678", ifsc: "HDFC0000123", branch: "Dhantoli, Nagpur", type: "settlement" },
       { label: "Own / House", bankName: "ICICI Bank", accountNo: "002405001234", ifsc: "ICIC0000024", branch: "BKC, Mumbai", type: "own" },
@@ -59,9 +69,9 @@ const COMPANY = {
     updatedAt: "2026-06-26T11:30:00.000Z",
   },
   memberships: [
-    { id: 1, exchange: "NSE", membershipType: "TM-CM", tradingMemberId: "90123", clearingMemberId: "M51234", cmCode: "12345", registrationNo: "INB231234567", segments: ["CASH", "FNO", "CURRENCY"], active: true, effectiveFrom: "2019-08-01" },
-    { id: 2, exchange: "BSE", membershipType: "TM-CM", tradingMemberId: "6789", clearingMemberId: "C6789", cmCode: "6789", registrationNo: "INB011234567", segments: ["CASH", "FNO"], active: true, effectiveFrom: "2019-09-15" },
-    { id: 3, exchange: "MCX", membershipType: "TM", tradingMemberId: "55510", clearingMemberId: null, cmCode: null, registrationNo: "INZ000312345", segments: ["COMMODITY"], active: false, effectiveFrom: "2021-01-10" },
+    { id: 1, exchange: "NSE", membershipType: "TM-CM", tradingMemberId: "90123", clearingMode: "self", clearingMemberId: "M51234", cmCode: "12345", thirdPartyClearer: null, registrationNo: "INB231234567", segments: ["CASH", "FNO", "CURRENCY"], active: true, effectiveFrom: "2019-08-01" },
+    { id: 2, exchange: "BSE", membershipType: "TM-CM", tradingMemberId: "6789", clearingMode: "self", clearingMemberId: "C6789", cmCode: "6789", thirdPartyClearer: null, registrationNo: "INB011234567", segments: ["CASH", "FNO"], active: true, effectiveFrom: "2019-09-15" },
+    { id: 3, exchange: "MCX", membershipType: "TM", tradingMemberId: "55510", clearingMode: "third_party", clearingMemberId: null, cmCode: null, thirdPartyClearer: { name: "Phillip Commodities India", cmCode: "MCX-CM-118", sebiRegNo: "INZ000045678", contactPerson: "Clearing Desk", email: "clearing@phillip.example", phone: "+91 22 6000 0000", agreementRef: "CM/2021/0117" }, registrationNo: "INZ000312345", segments: ["COMMODITY"], active: true, effectiveFrom: "2021-01-10" },
   ],
   activeSegments: ["CASH", "FNO", "CURRENCY"],
 };
@@ -161,8 +171,7 @@ function CompanyInfo() {
                 <Th>Exchange</Th>
                 <Th>Type</Th>
                 <Th>Trading Member ID</Th>
-                <Th>Clearing Member</Th>
-                <Th>CM Code</Th>
+                <Th>Clearing</Th>
                 <Th>SEBI Reg.</Th>
                 <Th>Segments</Th>
                 <Th>Status</Th>
@@ -174,8 +183,16 @@ function CompanyInfo() {
                   <Td className="font-medium text-ink">{m.exchange}</Td>
                   <Td>{m.membershipType ?? "—"}</Td>
                   <Td className="font-mono tabular-nums">{m.tradingMemberId ?? "—"}</Td>
-                  <Td className="font-mono tabular-nums">{m.clearingMemberId ?? "—"}</Td>
-                  <Td className="font-mono tabular-nums">{m.cmCode ?? "—"}</Td>
+                  <Td>
+                    <span className="flex flex-col gap-1">
+                      <ModeChip self={m.clearingMode === "self"} selfLabel="Self-clearing" otherLabel="Third-party" />
+                      <span className="font-mono text-[11px] text-ink-muted">
+                        {m.clearingMode === "self"
+                          ? m.clearingMemberId || m.cmCode || "—"
+                          : `via ${m.thirdPartyClearer?.name ?? "—"}`}
+                      </span>
+                    </span>
+                  </Td>
                   <Td className="font-mono tabular-nums">{m.registrationNo ?? "—"}</Td>
                   <Td>
                     <span className="flex flex-wrap gap-1">
@@ -270,12 +287,50 @@ function CompanyInfo() {
         </Panel>
 
         <Panel title="Depository & Banking">
-          <DefGrid
-            rows={[
-              ["NSDL DP ID", p.nsdlDpId],
-              ["CDSL DP ID", p.cdslDpId],
-            ]}
-          />
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">Depository participation</p>
+          <table className="mt-2 w-full border-collapse text-[13px]">
+            <thead>
+              <tr className="border-b border-rule font-mono text-[10px] uppercase tracking-[0.1em] text-ink-muted">
+                <Th>Depository</Th>
+                <Th>Mode</Th>
+                <Th>DP ID</Th>
+                <Th>DP / Provider</Th>
+                <Th>Status</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {p.depositories.map((d) => (
+                <tr key={d.depository} className="border-b border-rule last:border-0">
+                  <Td className="font-medium text-ink">{d.depository}</Td>
+                  <Td>
+                    <ModeChip self={d.mode === "self"} selfLabel="Self DP" otherLabel="Third-party" />
+                  </Td>
+                  <Td className="font-mono tabular-nums">{d.dpId ?? "—"}</Td>
+                  <Td>
+                    {d.mode === "self" ? (
+                      <span className="text-ink">{d.dpName ?? "Self"}</span>
+                    ) : (
+                      <span className="flex flex-col">
+                        <span className="text-ink">via {d.thirdParty?.name ?? "—"}</span>
+                        <span className="font-mono text-[10px] text-ink-muted/70">
+                          {[d.thirdParty?.sebiRegNo, d.thirdParty?.email, d.thirdParty?.agreementRef]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                    )}
+                  </Td>
+                  <Td>
+                    {d.active ? (
+                      <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-forest">Active</span>
+                    ) : (
+                      <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-muted/70">Inactive</span>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-muted">Bank accounts</p>
           <table className="mt-2 w-full border-collapse text-[13px]">
             <thead>
@@ -363,6 +418,18 @@ function KeyChip({ k, v }: { k: string; v: string }) {
   return (
     <span className="rounded-[5px] border border-rule bg-paper px-2 py-1 font-mono text-[10.5px] tracking-[0.04em] text-ink-muted">
       <span className="text-oxblood">{k}</span> <span className="text-ink">{v}</span>
+    </span>
+  );
+}
+
+function ModeChip({ self, selfLabel, otherLabel }: { self: boolean; selfLabel: string; otherLabel: string }) {
+  return self ? (
+    <span className="inline-block rounded-[4px] border border-forest/30 bg-forest-tint px-1.5 py-px font-mono text-[10px] uppercase tracking-[0.06em] text-forest">
+      {selfLabel}
+    </span>
+  ) : (
+    <span className="inline-block rounded-[4px] border border-gold/50 bg-paper px-1.5 py-px font-mono text-[10px] uppercase tracking-[0.06em] text-gold">
+      {otherLabel}
     </span>
   );
 }

@@ -27,8 +27,7 @@ function publicProfile(row) {
     complianceOfficer: row.compliance_officer ?? {},
     principalOfficer: row.principal_officer ?? {},
     keyPersonnel: row.key_personnel ?? [],
-    nsdlDpId: row.nsdl_dp_id,
-    cdslDpId: row.cdsl_dp_id,
+    depositories: row.depositories ?? [],
     bankAccounts: row.bank_accounts ?? [],
     baseCurrency: row.base_currency,
     financialYearStart: row.financial_year_start,
@@ -43,8 +42,10 @@ function publicMembership(row) {
     exchange: row.exchange,
     membershipType: row.membership_type,
     tradingMemberId: row.trading_member_id,
+    clearingMode: row.clearing_mode,
     clearingMemberId: row.clearing_member_id,
     cmCode: row.cm_code,
+    thirdPartyClearer: row.third_party_clearer ?? {},
     registrationNo: row.registration_no,
     segments: row.segments ?? [],
     active: row.active,
@@ -59,11 +60,16 @@ function publicMembership(row) {
 export async function getCompany() {
   const row = await repo.getProfile();
   if (!row) throw new NotFoundError('Company profile not initialised');
+  const profile = publicProfile(row);
   const memberships = (await repo.listMemberships()).map(publicMembership);
   const activeSegments = [
     ...new Set(memberships.filter((m) => m.active).flatMap((m) => m.segments)),
   ];
-  return { profile: publicProfile(row), memberships, activeSegments };
+  // Derived DP nature: none / self / third_party / mixed across active depositories.
+  const activeDeps = (profile.depositories ?? []).filter((d) => d.active !== false);
+  const dpModes = new Set(activeDeps.map((d) => d.mode));
+  const dpMode = activeDeps.length === 0 ? 'none' : dpModes.size > 1 ? 'mixed' : [...dpModes][0];
+  return { profile, memberships, activeSegments, dpMode };
 }
 
 export async function updateCompany(fields, { updatedBy } = {}) {
@@ -100,8 +106,33 @@ export async function ensureCompany() {
   });
   if (!seeded) return { created: false };
 
-  // First-time only: a couple of example exchange memberships to fill in.
-  await repo.createMembership({ exchange: 'NSE', membershipType: 'TM-CM', segments: ['CASH', 'FNO', 'CURRENCY'], active: true });
-  await repo.createMembership({ exchange: 'BSE', membershipType: 'TM-CM', segments: ['CASH', 'FNO'], active: true });
+  // First-time only: example depository participation (self-DP on NSDL, third-party
+  // DP on CDSL) and exchange memberships (self-clearing on NSE/BSE, third-party
+  // clearing on MCX). Admins review & edit these under Masters → Company Info.
+  await repo.updateProfile(
+    {
+      depositories: [
+        { depository: 'NSDL', mode: 'self', dpId: 'IN303456', dpName: 'Sapphire Broking Private Limited', sebiRegNo: 'IN-DP-NSDL-2019-001', active: true },
+        {
+          depository: 'CDSL',
+          mode: 'third_party',
+          dpId: '12088700',
+          active: true,
+          thirdParty: { name: 'Globe Capital DP Services Ltd', dpId: '12088700', sebiRegNo: 'IN-DP-CDSL-2014-072', contactPerson: 'Operations Desk', email: 'dp@globecapital.example', phone: '+91 22 4000 0000', agreementRef: 'DP/2019/0042' },
+        },
+      ],
+    },
+    null,
+  );
+  await repo.createMembership({ exchange: 'NSE', membershipType: 'TM-CM', clearingMode: 'self', segments: ['CASH', 'FNO', 'CURRENCY'], active: true });
+  await repo.createMembership({ exchange: 'BSE', membershipType: 'TM-CM', clearingMode: 'self', segments: ['CASH', 'FNO'], active: true });
+  await repo.createMembership({
+    exchange: 'MCX',
+    membershipType: 'TM',
+    clearingMode: 'third_party',
+    segments: ['COMMODITY'],
+    active: true,
+    thirdPartyClearer: { name: 'Phillip Commodities India', cmCode: 'MCX-CM-118', sebiRegNo: 'INZ000045678', contactPerson: 'Clearing Desk', email: 'clearing@phillip.example', phone: '+91 22 6000 0000', agreementRef: 'CM/2021/0117' },
+  });
   return { created: true };
 }

@@ -17,24 +17,46 @@ try {
 
   // Update profile (partial).
   const u = await company.updateCompany(
-    { phone: '+91-712-2999999', cin: 'U67120MH2019PTC000000', registeredAddress: { city: 'Nagpur', state: 'Maharashtra', country: 'India' } },
+    {
+      phone: '+91-712-2999999',
+      cin: 'U67120MH2019PTC000000',
+      registeredAddress: { city: 'Nagpur', state: 'Maharashtra', country: 'India' },
+      depositories: [
+        { depository: 'NSDL', mode: 'self', dpId: 'IN303456', active: true },
+        { depository: 'CDSL', mode: 'third_party', dpId: '12088700', active: true, thirdParty: { name: 'Globe Capital DP', dpId: '12088700', email: 'dp@globe.example' } },
+      ],
+    },
     { updatedBy: null },
   );
   assert.equal(u.phone, '+91-712-2999999');
-  assert.equal(u.cin, 'U67120MH2019PTC000000');
   assert.equal(u.registeredAddress.city, 'Nagpur', 'jsonb address stored');
-  console.log('profile update OK (scalar + jsonb)');
+  assert.equal(u.depositories.length, 2, 'depositories stored');
+  assert.equal(u.depositories[0].mode, 'self');
+  assert.equal(u.depositories[1].thirdParty.name, 'Globe Capital DP', 'third-party DP info stored');
+  const cc = await company.getCompany();
+  assert.equal(cc.dpMode, 'mixed', 'derived dpMode (self + third_party)');
+  console.log('profile update OK (scalar + jsonb + depositories; dpMode=mixed)');
 
-  // Add a membership.
-  const m = await company.addMembership({ exchange: 'MCX', membershipType: 'TM', segments: ['COMMODITY'], active: true });
+  // Add a membership with third-party clearing.
+  const m = await company.addMembership({
+    exchange: 'MCX',
+    membershipType: 'TM',
+    clearingMode: 'third_party',
+    segments: ['COMMODITY'],
+    active: true,
+    thirdPartyClearer: { name: 'Phillip Commodities', cmCode: 'MCX-CM-118', sebiRegNo: 'INZ000045678' },
+  });
   assert.equal(m.exchange, 'MCX');
+  assert.equal(m.clearingMode, 'third_party');
+  assert.equal(m.thirdPartyClearer.name, 'Phillip Commodities', 'third-party clearer stored');
   assert.deepEqual(m.segments, ['COMMODITY'], 'text[] segments stored');
 
-  // Update it.
-  const m2 = await company.updateMembership(m.id, { active: false, segments: ['COMMODITY', 'CURRENCY'] });
+  // Update it (switch to self-clearing).
+  const m2 = await company.updateMembership(m.id, { clearingMode: 'self', active: false, segments: ['COMMODITY', 'CURRENCY'] });
   assert.equal(m2.active, false);
+  assert.equal(m2.clearingMode, 'self');
   assert.deepEqual(m2.segments, ['COMMODITY', 'CURRENCY']);
-  console.log('membership add + update OK');
+  console.log('membership add + update OK (clearing mode + third-party clearer)');
 
   // Remove it; second update should 404.
   await company.removeMembership(m.id);
