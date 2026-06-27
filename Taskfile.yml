@@ -50,9 +50,9 @@ tasks:
     desc: Bring the whole stack up (infra + backend + frontend together)
     cmds:
       - task: _infra
-      - 'node scripts/ui.mjs section "Launching application" "backend 3000 + frontend 3001"'
+      - 'node scripts/ui.mjs section "Launching application" "starting app services"'
       # dev.mjs runs both servers with prefixed logs and prints a clear
-      # "what's up where" panel once both report ready.
+      # service-by-service panel (infra + app) once both report ready.
       - 'node scripts/dev.mjs'
 
   down:

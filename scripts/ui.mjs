@@ -9,6 +9,8 @@
  *   node scripts/ui.mjs summary "Headline"
  *   node scripts/ui.mjs urls
  */
+import { pathToFileURL } from 'node:url';
+
 const C = {
   cyan: '\x1b[1;36m',
   green: '\x1b[1;32m',
@@ -21,7 +23,10 @@ const C = {
 const RULE = '─'.repeat(60);
 const w = (s) => process.stdout.write(s);
 
-const URLS = [
+// Single source of truth for the service list — used by `task urls` AND the
+// `task up` ready panel (see scripts/dev.mjs), so the stack is always presented
+// service-by-service, not just "frontend / backend".
+export const URLS = [
   ['group', 'Application'],
   ['Backend API', 'http://localhost:3000/api/v1', ''],
   ['Health check', 'http://localhost:3000/api/v1/health/ready', ''],
@@ -34,7 +39,8 @@ const URLS = [
   ['', 'localhost:25', 'inbound MX (bounces/replies)'],
 ];
 
-function urls() {
+/** Print every service, grouped (Application / Infrastructure), one line each. */
+export function printUrls() {
   for (const row of URLS) {
     if (row[0] === 'group') {
       w(`\n  ${C.bold}${row[1]}${C.reset}\n`);
@@ -46,37 +52,42 @@ function urls() {
   w('\n');
 }
 
-const [cmd, ...args] = process.argv.slice(2);
-switch (cmd) {
-  case 'banner':
-    w(`\n  ${C.cyan}${C.bold}SAPPHIRE BROKING · BACKOFFICE${C.reset}\n`);
-    w(`  ${C.dim}on-prem monorepo — infra · backend · frontend${C.reset}\n`);
-    break;
-  case 'section':
-    w(`\n${C.cyan}${RULE}${C.reset}\n`);
-    w(`${C.cyan}${C.bold} ▸ ${args[0] || ''}${C.reset}  ${C.dim}${args[1] || ''}${C.reset}\n`);
-    w(`${C.cyan}${RULE}${C.reset}\n`);
-    break;
-  case 'info':
-    w(`${C.dim}  • ${args.join(' ')}${C.reset}\n`);
-    break;
-  case 'ok':
-    w(`${C.green}  ✔${C.reset} ${args.join(' ')}\n`);
-    break;
-  case 'warn':
-    w(`${C.yellow}  !${C.reset} ${args.join(' ')}\n`);
-    break;
-  case 'err':
-    w(`${C.red}  ✗${C.reset} ${args.join(' ')}\n`);
-    break;
-  case 'summary':
-    w(`\n${C.green}  ✔ ${args.join(' ')}${C.reset}\n`);
-    urls();
-    break;
-  case 'urls':
-    urls();
-    break;
-  default:
-    w(`ui.mjs: unknown command "${cmd}"\n`);
-    process.exit(1);
+// Run the CLI dispatch only when invoked directly (`node scripts/ui.mjs …`),
+// not when imported by dev.mjs for printUrls().
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  const [cmd, ...args] = process.argv.slice(2);
+  switch (cmd) {
+    case 'banner':
+      w(`\n  ${C.cyan}${C.bold}SAPPHIRE BROKING · BACKOFFICE${C.reset}\n`);
+      w(`  ${C.dim}on-prem monorepo — infra · backend · frontend${C.reset}\n`);
+      break;
+    case 'section':
+      w(`\n${C.cyan}${RULE}${C.reset}\n`);
+      w(`${C.cyan}${C.bold} ▸ ${args[0] || ''}${C.reset}  ${C.dim}${args[1] || ''}${C.reset}\n`);
+      w(`${C.cyan}${RULE}${C.reset}\n`);
+      break;
+    case 'info':
+      w(`${C.dim}  • ${args.join(' ')}${C.reset}\n`);
+      break;
+    case 'ok':
+      w(`${C.green}  ✔${C.reset} ${args.join(' ')}\n`);
+      break;
+    case 'warn':
+      w(`${C.yellow}  !${C.reset} ${args.join(' ')}\n`);
+      break;
+    case 'err':
+      w(`${C.red}  ✗${C.reset} ${args.join(' ')}\n`);
+      break;
+    case 'summary':
+      w(`\n${C.green}  ✔ ${args.join(' ')}${C.reset}\n`);
+      printUrls();
+      break;
+    case 'urls':
+      printUrls();
+      break;
+    default:
+      w(`ui.mjs: unknown command "${cmd}"\n`);
+      process.exit(1);
+  }
 }

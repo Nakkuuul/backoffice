@@ -8,6 +8,7 @@
  * Run from the repo root (the Taskfile invokes it there).
  */
 import { spawn } from 'node:child_process';
+import { printUrls } from './ui.mjs';
 
 const C = {
   reset: '\x1b[0m',
@@ -36,11 +37,11 @@ let shuttingDown = false;
 function showPanel() {
   if (panelShown || !SERVICES.every((s) => ready[s.name])) return;
   panelShown = true;
-  w(`\n${C.green}${C.bold}  ✔ All services are up${C.reset}\n\n`);
-  w(`  ${C.bold}Frontend  UI${C.reset}     ${C.cyan}http://localhost:3001${C.reset}\n`);
-  w(`  ${C.bold}Backend   API${C.reset}    ${C.cyan}http://localhost:3000/api/v1${C.reset}\n`);
-  w(`  ${C.bold}MinIO  console${C.reset}   ${C.cyan}http://localhost:9001${C.reset}   ${C.dim}(backoffice / backoffice_secret)${C.reset}\n`);
-  w(`\n  ${C.dim}prefixed logs stream below — Ctrl-C to stop both${C.reset}\n\n`);
+  // Present the whole stack service-by-service (infra + app), not just
+  // frontend/backend — reuses the canonical list in ui.mjs.
+  w(`\n${C.green}${C.bold}  ✔ All services are up${C.reset}\n`);
+  printUrls();
+  w(`  ${C.dim}prefixed logs stream below — Ctrl-C to stop both${C.reset}\n\n`);
 }
 
 for (const s of SERVICES) {
